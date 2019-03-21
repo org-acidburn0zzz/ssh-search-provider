@@ -1,6 +1,9 @@
-/* Ssh Search Provider for Gnome Shell
+/* -*- mode: js; indent-tabs-mode: nil; js-indent-level: 4 -*-
+ *
+ * Ssh Search Provider for Gnome Shell
  *
  * Copyright (c) 2013 Bernd Schlapsi
+ * Copyright (c) 2017-2019 Philippe Troin (F-i-f on GitHub)
  *
  * This programm is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,6 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+
 const Main = imports.ui.main;
 const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
@@ -25,12 +30,14 @@ const Shell = imports.gi.Shell;
 const St = imports.gi.St;
 const Util = imports.misc.util;
 const IconGrid = imports.ui.iconGrid;
+const ByteArray = imports.byteArray;
 
 // Settings
 const DEFAULT_TERMINAL_SCHEMA = 'org.gnome.desktop.default-applications.terminal';
 const DEFAULT_TERMINAL_KEY = 'exec';
 const DEFAULT_TERMINAL_ARGS_KEY = 'exec-arg';
 const SSHSEARCH_TERMINAL_APP = 'gnome-terminal';
+const SSHSEARCH_TERMINAL_DESKTOP = 'org.gnome.Terminal.desktop';
 const HOST_SEARCHSTRING = 'host ';
 
 // sshSearchProvider holds the instance of the search provider
@@ -61,7 +68,6 @@ function getDefaultTerminal() {
 //SshSearchProvider.prototype = {
 const SshSearchProvider = new Lang.Class({
     Name: 'SshSearchProvider',
-    Extends: Search.SearchProvider,
 
     _init: function() {
         // Since gnome-shell 3.6 the log output is in ~/.cache/gdm/session.log
@@ -69,15 +75,17 @@ const SshSearchProvider = new Lang.Class({
         // Since gnome-shell 3.10 you get log output with "journalctl -f"
         //log('init ssh-search');
 
-        let filename = '';
-        let terminal_definition = {};
+        this.id = imports.misc.extensionUtils.getCurrentExtension().uuid;
+        this.appInfo = Shell.AppSystem.get_default().lookup_app(SSHSEARCH_TERMINAL_DESKTOP).get_app_info();
 
         this.title = "SSHSearch";
-        this.searchSystem = null;
         this._configHosts = [];
         this._knownHosts = [];
         this._sshknownHosts1 = [];
         this._sshknownHosts2 = [];
+        this._terminal_definition = null;
+
+        let filename = '';
 
         // init for ~/.ssh/config
         filename = GLib.build_filenamev([GLib.get_home_dir(), '/.ssh/', 'config']);
@@ -120,7 +128,7 @@ const SshSearchProvider = new Lang.Class({
 
             // read hostnames if ssh-config file is created or changed
             let content = file.load_contents(null);
-            let filelines = String(content[1]).trim().split('\n');
+            let filelines = ByteArray.toString(content[1]).trim().split('\n');
 
             // search for all lines which begins with "host"
             for (var i=0; i<filelines.length; i++) {
@@ -183,14 +191,14 @@ const SshSearchProvider = new Lang.Class({
 
         // read hostnames if ssh-known_hosts file is created or changed
         let content = file.load_contents(null);
-        let filelines = String(content[1]).trim().split('\n');
+        let filelines = ByteArray.toString(content[1]).trim().split('\n');
 
         for (var i=0; i<filelines.length; i++) {
             let hostnames = filelines[i].split(' ')[0];
 
             // if hostname had a 60 char length, it looks like
             // the hostname is hashed and we ignore it here
-            if (hostnames.length != 60) {
+            if (hostnames[0] != '#' && (hostnames.length != 60 || hostnames.search(',') >= 0)) {
                 hostnames = hostnames.split(',');
                 for (var j=0; j<hostnames.length; j++) {
                     knownHosts.push(hostnames[j]);
@@ -204,33 +212,25 @@ const SshSearchProvider = new Lang.Class({
         return null;
     },
 
-    getResultMetas: function(resultIds, callback) {
-        let metas = resultIds.map(this.getResultMeta, this);
-        callback(metas);
+    _createIcon: function(size) {
+        return new St.Icon({ icon_name: this._terminal_definition.exec,
+                             icon_size: size });
     },
 
-    getResultMeta: function(resultId) {
-        let ssh_name = resultId.host;
-        let terminal_definition = getDefaultTerminal();
-        if (resultId.port != 22) {
-            ssh_name = ssh_name + ':' + resultId.port;
+    getResultMetas: function(resultIds, callback) {
+        this._terminal_definition = getDefaultTerminal();
+        let results = [];
+        for (let i = 0 ; i < resultIds.length; ++i ) {
+            results.push({ 'id': resultIds[i],
+                           'name': resultIds[i],
+                           'createIcon': Lang.bind(this, this._createIcon)
+                         });
         }
-        if (resultId.user.length != 0) {
-            ssh_name = resultId.user + '@' + ssh_name;
-        }
-
-        return { 'id': resultId,
-                 'name': ssh_name,
-                 'createIcon': function(size) {
-                        let xicon = new Gio.ThemedIcon({name: terminal_definition.exec});
-                        return new St.Icon({icon_size: size,
-                                            gicon: xicon});
-                 }
-               };
+        callback(results);
     },
 
     activateResult: function(id) {
-        let target = id.host;
+        let target = id;
         let terminal_definition = getDefaultTerminal();
         let terminal_args = terminal_definition.args.split(' ');
         let cmd = [terminal_definition.exec]
@@ -247,10 +247,14 @@ const SshSearchProvider = new Lang.Class({
         // build command
         cmd.push('--command')
 
-        if (id.user.length != 0) {
-            target = id.user + '@' + target;
+        let colonIndex = target.indexOf(':');
+        let port = 22;
+        if (colonIndex >= 0) {
+            port = target.substr(colonIndex+1)+0;
+            target = substr(target, colonIndex);
         }
-        if (id.port == 22) {
+
+        if (port == 22) {
             // don't call with the port option, because the host definition
             // could be from the ~/.ssh/config file
             cmd.push('ssh ' + target);
@@ -263,8 +267,7 @@ const SshSearchProvider = new Lang.Class({
         Util.spawn(cmd);
     },
 
-    _checkHostnames: function(hostnames, terms) {
-        let searchResults = [];
+    _checkHostnames: function(resultsDict, hostnames, terms) {
         for (var i=0; i<hostnames.length; i++) {
             for (var j=0; j<terms.length; j++) {
                 try {
@@ -285,11 +288,14 @@ const SshSearchProvider = new Lang.Class({
                             port = host_port[1];
                         }
 
-                        searchResults.push({
-                            'user': user,
-                            'host': host,
-                            'port': port
-                        });
+                        let ssh_name = host;
+                        if (port != 22) {
+                            ssh_name = ssh_name + ':' + port;
+                        }
+                        if (user.length != 0) {
+                            ssh_name = user + '@' + ssh_name;
+                        }
+                        resultsDict[ssh_name] = 1;
                     }
                 }
                 catch(ex) {
@@ -297,7 +303,6 @@ const SshSearchProvider = new Lang.Class({
                 }
             }
         }
-        return searchResults;
     },
 
     filterResults: function(providerResults, maxResults) {
@@ -306,23 +311,27 @@ const SshSearchProvider = new Lang.Class({
 
     _getResultSet: function(sessions, terms) {
         // check if a found host-name begins like the search-term
-        let results = [];
+        let resultsDict = {};
         let res = terms.map(function (term) { return new RegExp(term, 'i'); });
 
-        results = results.concat(this._checkHostnames(this._configHosts, terms));
-        results = results.concat(this._checkHostnames(this._knownHosts, terms));
-        results = results.concat(this._checkHostnames(this._sshknownHosts1, terms));
-        results = results.concat(this._checkHostnames(this._sshknownHosts2, terms));
+        this._checkHostnames(resultsDict, this._configHosts, terms);
+        this._checkHostnames(resultsDict, this._knownHosts, terms);
+        this._checkHostnames(resultsDict, this._sshknownHosts1, terms);
+        this._checkHostnames(resultsDict, this._sshknownHosts2, terms);
 
-        this.searchSystem.setResults(this, results);
+        let results = [];
+        for (let i in resultsDict) {
+            results.push(i);
+        }
+        return results;
     },
 
-    getInitialResultSet: function(terms) {
-        return this._getResultSet(this._sessions, terms);
+    getInitialResultSet: function(terms, cb) {
+        cb(this._getResultSet(this._sessions, terms));
     },
 
-    getSubsearchResultSet: function(previousResults, terms) {
-        return this._getResultSet(this._sessions, terms);
+    getSubsearchResultSet: function(previousResults, terms, cb) {
+        cb(this._getResultSet(this._sessions, terms));
     },
 });
 
@@ -332,13 +341,13 @@ function init() {
 function enable() {
     if (!sshSearchProvider) {
         sshSearchProvider = new SshSearchProvider();
-        Main.overview.addSearchProvider(sshSearchProvider);
+        Main.overview.viewSelector._searchResults._registerProvider(sshSearchProvider);
     }
 }
 
 function disable() {
     if  (sshSearchProvider) {
-        Main.overview.removeSearchProvider(sshSearchProvider);
+        Main.overview.viewSelector._searchResults._unregisterProvider(sshSearchProvider);
         sshSearchProvider.configMonitor.cancel();
         sshSearchProvider.knownhostsMonitor.cancel();
         sshSearchProvider.sshknownhostsMonitor1.cancel();
