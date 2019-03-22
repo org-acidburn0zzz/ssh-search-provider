@@ -2,6 +2,9 @@ SSH Search Provider
 =====================
 A gnome-shell extension which searches the ssh config and known_hosts file and provides the found ssh connections in your shell overview.
 
+### This is a fork
+This project is a fork of the [gnome-shell-extension-sshsearch](https://github.com/brot/gnome-shell-extension-sshsearch) project which has been unmaintained for a while.
+
 ### Features
 
  * it parses the ~/.ssh/config file and searches for the hostnames
@@ -15,7 +18,7 @@ Assume the ~/.ssh/config file looks like
     Host desktop
     User user
     HostName 192.168.1.100
-    
+
     Host desktop1
     User user
     HostName 192.168.1.101
@@ -24,7 +27,7 @@ Assume the ~/.ssh/config file looks like
     User user
     Port 2222
     HostName 11.11.111.111
-    
+
 and the ~/.ssh/known_hosts file looks like
 
     [11.11.111.111]:2222 ssh-rsa AAAAB...
@@ -64,18 +67,18 @@ Here are some example searches and the search results
 
 ### Installation
 Install the extension directly from the gnome-shell extension webpage:
-https://extensions.gnome.org/extension/73/ssh-search-provider/
+https://extensions.gnome.org/extension/TBD/ssh-search-provider/
 
 or manually
 
- * copy or link the folder "ssh-search-provider@gnome-shell-extensions.brot.github.com" to ~/.local/share/gnome-shell/extensions
+ * copy or link the folder "ssh-search-provider@extensions.gnome-shell.fifi.org" to ~/.local/share/gnome-shell/extensions
  * enable extension (e.g. via gnome-tweak-tool)
 
 ### Selecting Your preferred Terminal Application (only for gnome-shell > 3.4)
 If you want to replace 'gnome-terminal' with the name of your preferred terminal app so you have to set it in the gsettings. You can do this with the following command on the terminal:
 
     gsettings set org.gnome.desktop.default-applications.terminal exec <new default editor>
-    
+
 For example if you want to change gnome-terminal with terminator type:
 
     gsettings set org.gnome.desktop.default-applications.terminal exec terminator
@@ -89,8 +92,9 @@ For example if you want to use terminator in borderless mode type:
 
     gsettings set org.gnome.desktop.default-applications.terminal exec-arg "--borderless"
 
-### License
+### [License](https://github.com/F-i-f/ssh-search-provider/blob/master/LICENSE)
 Copyright (c) 2011 Bernd Schlapsi <brot@gmx.info>
+Copyright (c) 2017-2019 Philippe Troin (Fif_ on GitHub)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
