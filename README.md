@@ -1,56 +1,66 @@
-SSH Search Provider
-=====================
-A gnome-shell extension which searches the ssh config and known_hosts file and provides the found ssh connections in your shell overview.
+SSH Search Provider Reborn
+===========================
 
-### This is a fork
-This project is a fork of the [gnome-shell-extension-sshsearch](https://github.com/brot/gnome-shell-extension-sshsearch) project which has been unmaintained for a while.
+A gnome-shell extension which searches the ssh config and known_hosts
+file and provides the found ssh connections in your shell overview.
 
-### Features
+## This is a fork
 
- * it parses the ~/.ssh/config file and searches for the hostnames
- * it parses the ~/.ssh/known_hosts file and reads all hostnames (to use this feature you have to set the ssh setting "HashKnownHosts" to "no")
- * you are able to define a user for the founded hosts in the search term
+This project is a fork of the
+[gnome-shell-extension-sshsearch](https://github.com/brot/gnome-shell-extension-sshsearch)
+project which has been unmaintained for a while.
 
-### Examples
+## Features
 
-Assume the ~/.ssh/config file looks like
+ * it parses the ~/.ssh/config file and searches for the host names
 
-    Host desktop
-    User user
-    HostName 192.168.1.100
+ * it parses the ~/.ssh/known_hosts file and reads all host names (to
+   use this feature you have to set the ssh setting "HashKnownHosts"
+   to "no")
 
-    Host desktop1
-    User user
-    HostName 192.168.1.101
+ * you are able to define a user for the founded hosts in the search
+   term
 
-    host vserver
-    User user
-    Port 2222
-    HostName 11.11.111.111
+## Examples
 
-and the ~/.ssh/known_hosts file looks like
+Assume the ~/.ssh/config file looks like:
 
-    [11.11.111.111]:2222 ssh-rsa AAAAB...
-    github.com,207.97.227.239 ssh-rsa AAAAB...
-    user.webfactional.com,22.22.222.222 ssh-rsa AAAAB...
-    192.168.1.100 ssh-rsa AAAAB...
+	Host desktop
+	User user
+	HostName 192.168.1.100
 
-Here are some example searches and the search results
+	Host desktop1
+	User user
+	HostName 192.168.1.101
+
+	host vserver
+	User user
+	Port 2222
+	HostName 11.11.111.111
+
+and the ~/.ssh/known_hosts file looks like:
+
+	[11.11.111.111]:2222 ssh-rsa AAAAB...
+	github.com,207.97.227.239 ssh-rsa AAAAB...
+	user.webfactional.com,22.22.222.222 ssh-rsa AAAAB...
+	192.168.1.100 ssh-rsa AAAAB...
+
+Here are some example searches and the search results:
 
  * search-term: **desk**
    1. desktop
    2. desktop1
-   
+
  * search-term: **rv**
    1. vserver
-   
+
  * search-term: **11**
    1. 11.11.111.111:2222
-   
+
  * search-term: **97**
    1. 207.97.227.239
-   
- * search-term: **user@** (all hostnames are in the search results)
+
+ * search-term: **user@** (all host names are in the search results)
    1. user@desktop
    2. user@desktop1
    3. user@vserver
@@ -65,46 +75,89 @@ Here are some example searches and the search results
    1. user@desktop
    2. user@desktop1
 
-### Installation
-Install the extension directly from the gnome-shell extension webpage:
-https://extensions.gnome.org/extension/TBD/ssh-search-provider/
+## Download / Install
 
-or manually
+Install directly from the [Gnome Shell Extensions
+site](https://extensions.gnome.org/extension/TBD/ssh-search-provider/).
 
- * copy or link the folder "ssh-search-provider@extensions.gnome-shell.fifi.org" to ~/.local/share/gnome-shell/extensions
- * enable extension (e.g. via gnome-tweak-tool)
+Or download the zip file from the GitHub [releases
+page](https://github.com/F-i-f/ssh-search-provider/releases) and unzip
+[the
+file](https://github.com/F-i-f/ssh-search-provider/releases/download/v1/ssh-search-provider@extensions.gnome-shell.fifi.org.v1.shell-extension.zip)
+in your `~/.local/share/gnome-shell/extensions/` directory.
 
-### Selecting Your preferred Terminal Application (only for gnome-shell > 3.4)
-If you want to replace 'gnome-terminal' with the name of your preferred terminal app so you have to set it in the gsettings. You can do this with the following command on the terminal:
+## Selecting Your preferred Terminal Application (only for gnome-shell > 3.4)
 
-    gsettings set org.gnome.desktop.default-applications.terminal exec <new default editor>
+If you want to replace 'gnome-terminal' with the name of your
+preferred terminal app so you have to set it with either *dconf
+Editor* or with *gsettings*.
 
-For example if you want to change gnome-terminal with terminator type:
+### Instructions for *dconf Editor*
 
-    gsettings set org.gnome.desktop.default-applications.terminal exec terminator
+Launch *dconf Editor* and navigate to the
+`/org/gnome/desktop/applications/terminal/` key.
 
-#### Define arguments for your Terminal Application (only for gnome-shell >= 3.8)
-If you want to add some arguments for your terminal app you can set this arguments with
+![dconf Editor showing the default Terminal settings](docs/dconf-editor-terminal.png)
 
-    gsettings set org.gnome.desktop.default-applications.terminal exec-arg "<args>"
+### Instructions with *gsettings*:
 
-For example if you want to use terminator in borderless mode type:
+Enter the following command on the terminal:
 
-    gsettings set org.gnome.desktop.default-applications.terminal exec-arg "--borderless"
+	gsettings set org.gnome.desktop.applications.terminal exec <new default editor>
 
-### [License](https://github.com/F-i-f/ssh-search-provider/blob/master/LICENSE)
-Copyright (c) 2011 Bernd Schlapsi <brot@gmx.info>
-Copyright (c) 2017-2019 Philippe Troin (Fif_ on GitHub)
+For example if you want to change *gnome-terminal* to *terminator* type:
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-any later version.
+	gsettings set orgf.gnome.desktop.applications.terminal exec terminator
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+#### Defining arguments for your Terminal Application
 
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+If you want to add some arguments to your terminal app command line
+you can set them with:
+
+	gsettings set org.gnome.desktop.applications.terminal exec-arg "<args>"
+
+For example if you want to use *terminator* in border-less mode type:
+
+	gsettings set org.gnome.desktop.applications.terminal exec-arg "--borderless"
+
+## Building from source
+
+### Requirements
+
+- [meson](http://mesonbuild.com/) v0.44.0 or later.
+
+### Running the build
+
+- Check out: `git clone https://github.com/F-i-f/ssh-search-provider`
+
+- `cd ssh-search-provider`
+
+- Run meson: `meson build`
+
+- To install in your your gnome shell extensions' directory (~/.local/share/gnome-shell/extensions), run ninja: `ninja -C build install`
+
+- To build the extension zip files, run: `ninja -C build extension.zip`, the extension will be found under `build/extension.zip`.
+
+## Changelog
+
+### Version 1
+#### March 24, 2019.
+
+- First release, based upon [the
+  original](https://github.com/brot/gnome-shell-extension-sshsearch).
+
+## Credits
+
+- The [`meson-gse` credits](https://github.com/F-i-f/meson-gse/) are
+  included here by reference.
+
+- Bernd Schlapsi <brot@gmx.info> for the original extension.
+
+<!--  LocalWords:  config sshsearch unmaintained HashKnownHosts rsa
+ -->
+<!--  LocalWords:  HostName desktop1 vserver AAAAB github rv 'gnome
+ -->
+<!--  LocalWords:  terminal' gsettings arg args borderless Changelog
+ -->
+<!--  LocalWords:  extensions' Bernd Schlapsi Troin Fif dconf
+ -->
