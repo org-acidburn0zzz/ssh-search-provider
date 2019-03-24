@@ -327,11 +327,11 @@ const SshSearchProvider = new Lang.Class({
     },
 
     getInitialResultSet: function(terms, cb) {
-        cb(this._getResultSet(this._sessions, terms));
+        cb(this._getResultSet(null, terms));
     },
 
     getSubsearchResultSet: function(previousResults, terms, cb) {
-        cb(this._getResultSet(this._sessions, terms));
+        cb(this._getResultSet(null, terms));
     },
 });
 
