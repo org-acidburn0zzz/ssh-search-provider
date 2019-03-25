@@ -86,7 +86,9 @@ Or download the zip file from the GitHub [releases
 page](https://github.com/F-i-f/ssh-search-provider/releases) and unzip
 [the
 file](https://github.com/F-i-f/ssh-search-provider/releases/download/v1/ssh-search-provider@extensions.gnome-shell.fifi.org.v1.shell-extension.zip)
-in your `~/.local/share/gnome-shell/extensions/` directory.
+in the
+`~/.local/share/gnome-shell/extensions/ssh-search-provider@extensions.gnome-shell.fifi.org`
+directory (you may have to create the directory).
 
 ## Selecting Your preferred Terminal Application
 
