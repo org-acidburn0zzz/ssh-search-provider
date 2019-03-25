@@ -4,6 +4,8 @@ SSH Search Provider Reborn
 A gnome-shell extension which searches the ssh config and known_hosts
 file and provides the found ssh connections in your shell overview.
 
+![Screenshot](docs/screenshot.jpg)
+
 ## This is a fork
 
 This project is a fork of the
@@ -86,7 +88,7 @@ page](https://github.com/F-i-f/ssh-search-provider/releases) and unzip
 file](https://github.com/F-i-f/ssh-search-provider/releases/download/v1/ssh-search-provider@extensions.gnome-shell.fifi.org.v1.shell-extension.zip)
 in your `~/.local/share/gnome-shell/extensions/` directory.
 
-## Selecting Your preferred Terminal Application (only for gnome-shell > 3.4)
+## Selecting Your preferred Terminal Application
 
 If you want to replace 'gnome-terminal' with the name of your
 preferred terminal app so you have to set it with either *dconf
