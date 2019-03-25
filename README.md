@@ -80,7 +80,7 @@ Here are some example searches and the search results:
 ## Download / Install
 
 Install directly from the [Gnome Shell Extensions
-site](https://extensions.gnome.org/extension/TBD/ssh-search-provider/).
+site](https://extensions.gnome.org/extension/1714/ssh-search-provider-reborn/).
 
 Or download the zip file from the GitHub [releases
 page](https://github.com/F-i-f/ssh-search-provider/releases) and unzip
