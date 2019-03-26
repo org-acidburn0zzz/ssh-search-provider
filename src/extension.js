@@ -66,10 +66,8 @@ function getDefaultTerminal() {
 }
 
 //SshSearchProvider.prototype = {
-const SshSearchProvider = new Lang.Class({
-    Name: 'SshSearchProvider',
-
-    _init: function() {
+const SshSearchProvider = class SshSearchProvider {
+    constructor() {
         // Since gnome-shell 3.6 the log output is in ~/.cache/gdm/session.log
         // Since gnome-shell 3.8 the log output is in /var/log/messages
         // Since gnome-shell 3.10 you get log output with "journalctl -f"
@@ -112,9 +110,9 @@ const SshSearchProvider = new Lang.Class({
         this.sshknownhostsMonitor2 = sshknownhostsFile2.monitor_file(Gio.FileMonitorFlags.NONE, null);
         this.sshknownhostsMonitor2.connect('changed', Lang.bind(this, this._onSshKnownhosts2Changed));
         this._onSshKnownhosts2Changed(null, sshknownhostsFile2, null, Gio.FileMonitorEvent.CREATED);
-    },
+    }
 
-    _onConfigChanged: function(filemonitor, file, other_file, event_type) {
+    _onConfigChanged(filemonitor, file, other_file, event_type) {
         if (!file.query_exists (null)) {
             this._configHosts = [];
             return;
@@ -142,9 +140,9 @@ const SshSearchProvider = new Lang.Class({
                 }
             }
         }
-    },
+    }
 
-    _onKnownhostsChanged: function(filemonitor, file, other_file, event_type) {
+    _onKnownhostsChanged(filemonitor, file, other_file, event_type) {
         if (!file.query_exists (null)) {
             this._knownHosts = [];
             return;
@@ -156,9 +154,9 @@ const SshSearchProvider = new Lang.Class({
         {
             this._knownHosts = this._parseKnownHosts(file);
         }
-    },
+    }
 
-    _onSshKnownhosts1Changed: function(filemonitor, file, other_file, event_type) {
+    _onSshKnownhosts1Changed(filemonitor, file, other_file, event_type) {
         if (!file.query_exists (null)) {
             this._sshknownHosts1 = [];
             return;
@@ -170,9 +168,9 @@ const SshSearchProvider = new Lang.Class({
         {
             this._sshknownHosts1 = this._parseKnownHosts(file);
         }
-    },
+    }
 
-    _onSshKnownhosts2Changed: function(filemonitor, file, other_file, event_type) {
+    _onSshKnownhosts2Changed(filemonitor, file, other_file, event_type) {
         if (!file.query_exists (null)) {
             this._sshknownHosts2 = [];
             return;
@@ -184,9 +182,9 @@ const SshSearchProvider = new Lang.Class({
         {
             this._sshknownHosts2 = this._parseKnownHosts(file);
         }
-    },
+    }
 
-    _parseKnownHosts: function(file) {
+    _parseKnownHosts(file) {
         let knownHosts = [];
 
         // read hostnames if ssh-known_hosts file is created or changed
@@ -206,18 +204,18 @@ const SshSearchProvider = new Lang.Class({
             }
         }
         return knownHosts;
-    },
+    }
 
-    createResultObject: function(result, terms) {
+    createResultObject(result, terms) {
         return null;
-    },
+    }
 
-    _createIcon: function(size) {
+    _createIcon(size) {
         return new St.Icon({ icon_name: this._terminal_definition.exec,
                              icon_size: size });
-    },
+    }
 
-    getResultMetas: function(resultIds, callback) {
+    getResultMetas(resultIds, callback) {
         this._terminal_definition = getDefaultTerminal();
         let results = [];
         for (let i = 0 ; i < resultIds.length; ++i ) {
@@ -227,9 +225,9 @@ const SshSearchProvider = new Lang.Class({
                          });
         }
         callback(results);
-    },
+    }
 
-    activateResult: function(id) {
+    activateResult(id) {
         let target = id;
         let terminal_definition = getDefaultTerminal();
         let terminal_args = terminal_definition.args.split(' ');
@@ -265,9 +263,9 @@ const SshSearchProvider = new Lang.Class({
 
         // start terminal with ssh command
         Util.spawn(cmd);
-    },
+    }
 
-    _checkHostnames: function(resultsDict, hostnames, terms) {
+    _checkHostnames(resultsDict, hostnames, terms) {
         for (var i=0; i<hostnames.length; i++) {
             for (var j=0; j<terms.length; j++) {
                 try {
@@ -303,13 +301,13 @@ const SshSearchProvider = new Lang.Class({
                 }
             }
         }
-    },
+    }
 
-    filterResults: function(providerResults, maxResults) {
+    filterResults(providerResults, maxResults) {
         return providerResults;
-    },
+    }
 
-    _getResultSet: function(sessions, terms) {
+    _getResultSet(sessions, terms) {
         // check if a found host-name begins like the search-term
         let resultsDict = {};
         let res = terms.map(function (term) { return new RegExp(term, 'i'); });
@@ -324,16 +322,16 @@ const SshSearchProvider = new Lang.Class({
             results.push(i);
         }
         return results;
-    },
+    }
 
-    getInitialResultSet: function(terms, cb) {
+    getInitialResultSet(terms, cb) {
         cb(this._getResultSet(null, terms));
-    },
+    }
 
-    getSubsearchResultSet: function(previousResults, terms, cb) {
+    getSubsearchResultSet(previousResults, terms, cb) {
         cb(this._getResultSet(null, terms));
-    },
-});
+    }
+};
 
 function init() {
 }
