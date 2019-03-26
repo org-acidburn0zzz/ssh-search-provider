@@ -85,7 +85,7 @@ site](https://extensions.gnome.org/extension/1714/ssh-search-provider-reborn/).
 Or download the zip file from the GitHub [releases
 page](https://github.com/F-i-f/ssh-search-provider/releases) and unzip
 [the
-file](https://github.com/F-i-f/ssh-search-provider/releases/download/v1/ssh-search-provider@extensions.gnome-shell.fifi.org.v1.shell-extension.zip)
+file](https://github.com/F-i-f/ssh-search-provider/releases/download/v2/ssh-search-provider@extensions.gnome-shell.fifi.org.v2.shell-extension.zip)
 in the
 `~/.local/share/gnome-shell/extensions/ssh-search-provider@extensions.gnome-shell.fifi.org`
 directory (you may have to create the directory).
@@ -143,6 +143,13 @@ For example if you want to use *terminator* in border-less mode type:
 - To build the extension zip files, run: `ninja -C build extension.zip`, the extension will be found under `build/extension.zip`.
 
 ## Changelog
+
+### Version 2
+#### March 26, 2019.
+
+- ES60 / Gnome-Shell 3.32 compatibility (still compatible with 3.30 and lower).
+- Updated meson-gse to latest.
+- Minor doc updates.
 
 ### Version 1
 #### March 24, 2019.
