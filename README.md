@@ -85,7 +85,7 @@ site](https://extensions.gnome.org/extension/1714/ssh-search-provider-reborn/).
 Or download the zip file from the GitHub [releases
 page](https://github.com/F-i-f/ssh-search-provider/releases) and unzip
 [the
-file](https://github.com/F-i-f/ssh-search-provider/releases/download/v2/ssh-search-provider@extensions.gnome-shell.fifi.org.v2.shell-extension.zip)
+file](https://github.com/F-i-f/ssh-search-provider/releases/download/v3/ssh-search-provider@extensions.gnome-shell.fifi.org.v3.shell-extension.zip)
 in the
 `~/.local/share/gnome-shell/extensions/ssh-search-provider@extensions.gnome-shell.fifi.org`
 directory (you may have to create the directory).
@@ -143,6 +143,11 @@ For example if you want to use *terminator* in border-less mode type:
 - To build the extension zip files, run: `ninja -C build extension.zip`, the extension will be found under `build/extension.zip`.
 
 ## Changelog
+
+### Version 3
+#### March 27, 2019.
+
+- The host names read from `~/.ssh/config` are not coerced to lower-case.
 
 ### Version 2
 #### March 26, 2019.
