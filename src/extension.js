@@ -40,6 +40,20 @@ const SSHSEARCH_TERMINAL_APP = 'gnome-terminal';
 const SSHSEARCH_TERMINAL_DESKTOP = 'org.gnome.Terminal.desktop';
 const HOST_SEARCHSTRING = 'host ';
 
+// ByteArray.toString() doesn't work as expected in Gnome-Shell 3.28-
+// Test & provide a wrapper
+var ByteArray_toString;
+
+if (ByteArray.toString(ByteArray.fromString('X')) == 'X') {
+    ByteArray_toString = function(x) {
+        return ByteArray.toString(x);
+    }
+} else {
+    ByteArray_toString = function(x) {
+        return String(x);
+    }
+}
+
 // sshSearchProvider holds the instance of the search provider
 // implementation. If null, the extension is either uninitialized
 // or has been disabled via disable().
@@ -126,7 +140,7 @@ const SshSearchProvider = class SshSearchProvider {
 
             // read hostnames if ssh-config file is created or changed
             let content = file.load_contents(null);
-            let filelines = ByteArray.toString(content[1]).trim().split('\n');
+            let filelines = ByteArray_toString(content[1]).trim().split('\n');
 
             // search for all lines which begins with "host"
             for (var i=0; i<filelines.length; i++) {
@@ -189,7 +203,7 @@ const SshSearchProvider = class SshSearchProvider {
 
         // read hostnames if ssh-known_hosts file is created or changed
         let content = file.load_contents(null);
-        let filelines = ByteArray.toString(content[1]).trim().split('\n');
+        let filelines = ByteArray_toString(content[1]).trim().split('\n');
 
         for (var i=0; i<filelines.length; i++) {
             let hostnames = filelines[i].split(' ')[0];

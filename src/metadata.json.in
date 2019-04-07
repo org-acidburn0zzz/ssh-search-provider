@@ -2,6 +2,7 @@
   "description": "Provide SSH search results in overview.\n\nThis is a fork of the original \"SSH Search Provider\", updated to work with newer Gnome-Shells.",
   "name": "SSH Search Provider Reborn",
   "shell-version": [
+    "3.28",
     "3.30",
     "3.32"
   ],
