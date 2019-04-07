@@ -249,7 +249,7 @@ const SshSearchProvider = class SshSearchProvider {
         let port = 22;
         if (colonIndex >= 0) {
             port = target.substr(colonIndex+1)+0;
-            target = substr(target, colonIndex);
+            target = target.substr(colonIndex);
         }
 
         if (port == 22) {
