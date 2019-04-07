@@ -244,20 +244,27 @@ const SshSearchProvider = class SshSearchProvider {
     activateResult(id) {
         let target = id;
         let terminal_definition = getDefaultTerminal();
-        let terminal_args = terminal_definition.args.split(' ');
+        let terminal_args = terminal_definition.args.trim().split('\\s+')
         let cmd = [terminal_definition.exec]
+        let is_gnome_terminal = cmd.indexOf('gnome-terminal') >= 0;
 
         // add defined gsettings arguments, but remove --execute and -x
         for (var i=0; i<terminal_args.length; i++) {
             let arg = terminal_args[i];
 
-            if (arg != '--execute' && arg != '-x' && arg != '--command' && arg != '-e') {
+            if ( ( is_gnome_terminal
+                   && arg != '--execute'
+                   && arg != '-x'
+                   && arg != '--command'
+                   && arg != '-e')
+                 || ! is_gnome_terminal) {
                 cmd.push(terminal_args[i]);
             }
         }
 
-        // build command
-        cmd.push('--command')
+        if (is_gnome_terminal) {
+            cmd.push('--command')
+        }
 
         let colonIndex = target.indexOf(':');
         let port = 22;
