@@ -86,9 +86,13 @@ const SshSearchProvider = class SshSearchProvider {
         // Since gnome-shell 3.8 the log output is in /var/log/messages
         // Since gnome-shell 3.10 you get log output with "journalctl -f"
         //log('init ssh-search');
+        let ex;
 
         this.id = imports.misc.extensionUtils.getCurrentExtension().uuid;
-        this.appInfo = Shell.AppSystem.get_default().lookup_app(SSHSEARCH_TERMINAL_DESKTOP).get_app_info();
+        try {
+            this.appInfo = Shell.AppSystem.get_default().lookup_app(SSHSEARCH_TERMINAL_DESKTOP).get_app_info();
+        } catch (ex) {
+        }
 
         this.title = "SSHSearch";
         this._configHosts = [];
