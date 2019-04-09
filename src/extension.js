@@ -24,7 +24,6 @@ const Main = imports.ui.main;
 const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
-const Lang = imports.lang;
 const Search = imports.ui.search;
 const Shell = imports.gi.Shell;
 const St = imports.gi.St;
@@ -90,26 +89,26 @@ const SshSearchProvider = class SshSearchProvider {
         filename = GLib.build_filenamev([GLib.get_home_dir(), '/.ssh/', 'config']);
         let configFile = Gio.file_new_for_path(filename);
         this.configMonitor = configFile.monitor_file(Gio.FileMonitorFlags.NONE, null);
-        this.configMonitor.connect('changed', Lang.bind(this, this._onConfigChanged));
+        this.configMonitor.connect('changed', this._onConfigChanged.bind(this));
         this._onConfigChanged(null, configFile, null, Gio.FileMonitorEvent.CREATED);
 
         // init for ~/.ssh/known_hosts
         filename = GLib.build_filenamev([GLib.get_home_dir(), '/.ssh/', 'known_hosts']);
         let knownhostsFile = Gio.file_new_for_path(filename);
         this.knownhostsMonitor = knownhostsFile.monitor_file(Gio.FileMonitorFlags.NONE, null);
-        this.knownhostsMonitor.connect('changed', Lang.bind(this, this._onKnownhostsChanged));
+        this.knownhostsMonitor.connect('changed', this._onKnownhostsChanged.bind(this));
         this._onKnownhostsChanged(null, knownhostsFile, null, Gio.FileMonitorEvent.CREATED);
 
         // init for /etc/ssh/ssh_known_hosts
         let sshknownhostsFile1 = Gio.file_new_for_path('/etc/ssh/ssh_known_hosts');
         this.sshknownhostsMonitor1 = sshknownhostsFile1.monitor_file(Gio.FileMonitorFlags.NONE, null);
-        this.sshknownhostsMonitor1.connect('changed', Lang.bind(this, this._onSshKnownhosts1Changed));
+        this.sshknownhostsMonitor1.connect('changed', this._onSshKnownhosts1Changed.bind(this));
         this._onSshKnownhosts1Changed(null, sshknownhostsFile1, null, Gio.FileMonitorEvent.CREATED);
 
         // init for /etc/ssh_known_hosts
         let sshknownhostsFile2 = Gio.file_new_for_path('/etc/ssh_known_hosts');
         this.sshknownhostsMonitor2 = sshknownhostsFile2.monitor_file(Gio.FileMonitorFlags.NONE, null);
-        this.sshknownhostsMonitor2.connect('changed', Lang.bind(this, this._onSshKnownhosts2Changed));
+        this.sshknownhostsMonitor2.connect('changed', this._onSshKnownhosts2Changed.bind(this));
         this._onSshKnownhosts2Changed(null, sshknownhostsFile2, null, Gio.FileMonitorEvent.CREATED);
 
         this.onTerminalApplicationChangedSignal = this._settings.connect('changed::terminal-application', this._on_terminal_application_change.bind(this));
@@ -209,6 +208,7 @@ const SshSearchProvider = class SshSearchProvider {
         return knownHosts;
     }
 
+    // Search API
     createResultObject(result, terms) {
         return null;
     }
@@ -224,7 +224,7 @@ const SshSearchProvider = class SshSearchProvider {
         for (let i = 0 ; i < resultIds.length; ++i ) {
             results.push({ 'id': resultIds[i],
                            'name': resultIds[i],
-                           'createIcon': Lang.bind(this, this._createIcon)
+                           'createIcon': this._createIcon.bind(this)
                          });
         }
         callback(results);
