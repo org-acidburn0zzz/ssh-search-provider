@@ -32,12 +32,15 @@ const Util = imports.misc.util;
 const IconGrid = imports.ui.iconGrid;
 const ByteArray = imports.byteArray;
 
+const ExtensionUtils = imports.misc.extensionUtils;
+const Me = ExtensionUtils.getCurrentExtension();
+const Convenience = Me.imports.convenience;
+
 // Settings
 const DEFAULT_TERMINAL_SCHEMA = 'org.gnome.desktop.default-applications.terminal';
 const DEFAULT_TERMINAL_KEY = 'exec';
 const DEFAULT_TERMINAL_ARGS_KEY = 'exec-arg';
-const SSHSEARCH_TERMINAL_APP = 'gnome-terminal';
-const SSHSEARCH_TERMINAL_DESKTOP = 'org.gnome.Terminal.desktop';
+const FALLBACK_TERMINAL = { exec: 'gnome-terminal', args: '--', single: false };
 const HOST_SEARCHSTRING = 'host ';
 
 // ByteArray.toString() doesn't work as expected in Gnome-Shell 3.28-
@@ -59,26 +62,6 @@ if (ByteArray.toString(ByteArray.fromString('X')) == 'X') {
 // or has been disabled via disable().
 var sshSearchProvider = null;
 
-// try to find the default terminal app. fallback is gnome-terminal
-function getDefaultTerminal() {
-    try {
-        if (Gio.Settings.list_schemas().indexOf(DEFAULT_TERMINAL_SCHEMA) == -1) {
-            return {'exec': SSHSEARCH_TERMINAL_APP,
-                    'args': ''
-                   };
-        }
-
-        let terminal_setting = new Gio.Settings({ schema: DEFAULT_TERMINAL_SCHEMA });
-        return {'exec': terminal_setting.get_string(DEFAULT_TERMINAL_KEY),
-                'args': terminal_setting.get_string(DEFAULT_TERMINAL_ARGS_KEY)
-               };
-    } catch (err) {
-        return {'exec': SSHSEARCH_TERMINAL_APP,
-                'args': ''
-               };
-    }
-}
-
 //SshSearchProvider.prototype = {
 const SshSearchProvider = class SshSearchProvider {
     constructor() {
@@ -89,10 +72,10 @@ const SshSearchProvider = class SshSearchProvider {
         let ex;
 
         this.id = imports.misc.extensionUtils.getCurrentExtension().uuid;
-        try {
-            this.appInfo = Shell.AppSystem.get_default().lookup_app(SSHSEARCH_TERMINAL_DESKTOP).get_app_info();
-        } catch (ex) {
-        }
+        this._settings = Convenience.getSettings();
+
+        let app_id = this._settings.get_string('terminal-application');
+        this.appInfo = Gio.DesktopAppInfo.new(app_id);
 
         this.title = "SSHSearch";
         this._configHosts = [];
@@ -128,6 +111,8 @@ const SshSearchProvider = class SshSearchProvider {
         this.sshknownhostsMonitor2 = sshknownhostsFile2.monitor_file(Gio.FileMonitorFlags.NONE, null);
         this.sshknownhostsMonitor2.connect('changed', Lang.bind(this, this._onSshKnownhosts2Changed));
         this._onSshKnownhosts2Changed(null, sshknownhostsFile2, null, Gio.FileMonitorEvent.CREATED);
+
+        this.onTerminalApplicationChangedSignal = this._settings.connect('changed::terminal-application', this._on_terminal_application_change.bind(this));
     }
 
     _onConfigChanged(filemonitor, file, other_file, event_type) {
@@ -234,7 +219,7 @@ const SshSearchProvider = class SshSearchProvider {
     }
 
     getResultMetas(resultIds, callback) {
-        this._terminal_definition = getDefaultTerminal();
+        this._terminal_definition = this._getDefaultTerminal();
         let results = [];
         for (let i = 0 ; i < resultIds.length; ++i ) {
             results.push({ 'id': resultIds[i],
@@ -247,28 +232,9 @@ const SshSearchProvider = class SshSearchProvider {
 
     activateResult(id) {
         let target = id;
-        let terminal_definition = getDefaultTerminal();
-        let terminal_args = terminal_definition.args.trim().split('\\s+')
+        let terminal_definition = this._getDefaultTerminal();
         let cmd = [terminal_definition.exec]
-        let is_gnome_terminal = cmd.indexOf('gnome-terminal') >= 0;
-
-        // add defined gsettings arguments, but remove --execute and -x
-        for (var i=0; i<terminal_args.length; i++) {
-            let arg = terminal_args[i];
-
-            if ( ( is_gnome_terminal
-                   && arg != '--execute'
-                   && arg != '-x'
-                   && arg != '--command'
-                   && arg != '-e')
-                 || ! is_gnome_terminal) {
-                cmd.push(terminal_args[i]);
-            }
-        }
-
-        if (is_gnome_terminal) {
-            cmd.push('--command')
-        }
+        cmd.push.apply(cmd, terminal_definition.args.trim().split(/\s+/))
 
         let colonIndex = target.indexOf(':');
         let port = 22;
@@ -277,13 +243,20 @@ const SshSearchProvider = class SshSearchProvider {
             target = target.substr(colonIndex);
         }
 
+        let sshCmd;
         if (port == 22) {
             // don't call with the port option, because the host definition
             // could be from the ~/.ssh/config file
-            cmd.push('ssh ' + target);
+            sshCmd = ['ssh', target];
         }
         else {
-            cmd.push('ssh -p ' + id.port + ' ' + target);
+            sshCmd = ['ssh', '-p', id.port, target];
+        }
+
+        if (terminal_definition.single) {
+            cmd.push(sshCmd.join(' '));
+        } else {
+            cmd.push.apply(cmd, sshCmd);
         }
 
         // start terminal with ssh command
@@ -356,6 +329,38 @@ const SshSearchProvider = class SshSearchProvider {
     getSubsearchResultSet(previousResults, terms, cb) {
         cb(this._getResultSet(null, terms));
     }
+
+    // try to find the default terminal app. fallback is gnome-terminal
+    _getDefaultTerminal() {
+        if (this.appInfo != null) {
+            return {
+                exec: this.appInfo.get_string('Exec'),
+                args: this._settings.get_string('terminal-application-arguments'),
+                single: this._settings.get_boolean('ssh-command-single-argument')
+            };
+        }
+
+        let err;
+        try {
+            if (Gio.Settings.list_schemas().indexOf(DEFAULT_TERMINAL_SCHEMA) == -1) {
+                return FALLBACK_TERMINAL;
+            }
+
+            let terminal_setting = new Gio.Settings({ schema: DEFAULT_TERMINAL_SCHEMA });
+            return {
+                'exec': terminal_setting.get_string(DEFAULT_TERMINAL_KEY),
+                'args': terminal_setting.get_string(DEFAULT_TERMINAL_ARGS_KEY),
+                'single': false
+            };
+        } catch (err) {
+            return FALLBACK_TERMINAL;
+        }
+    }
+
+    _on_terminal_application_change() {
+        disable();
+        enable();
+    }
 };
 
 function init() {
@@ -375,6 +380,7 @@ function disable() {
         sshSearchProvider.knownhostsMonitor.cancel();
         sshSearchProvider.sshknownhostsMonitor1.cancel();
         sshSearchProvider.sshknownhostsMonitor2.cancel();
+        sshSearchProvider._settings.disconnect(sshSearchProvider.onTerminalApplicationChangedSignal);
         sshSearchProvider = null;
     }
 }

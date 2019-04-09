@@ -1,6 +1,8 @@
 {
   "description": "Provide SSH search results in overview.\n\nThis is a fork of the original \"SSH Search Provider\", updated to work with newer Gnome-Shells.",
+  "gettext-domain": "@gettext_domain@",
   "name": "SSH Search Provider Reborn",
+  "settings-schema": "org.gnome.shell.extensions.ssh-search-provider",
   "shell-version": [
     "3.28",
     "3.30",
