@@ -56,25 +56,15 @@ if (ByteArray.toString(ByteArray.fromString('X')) == 'X') {
     }
 }
 
-// sshSearchProvider holds the instance of the search provider
-// implementation. If null, the extension is either uninitialized
-// or has been disabled via disable().
-var sshSearchProvider = null;
-
-//SshSearchProvider.prototype = {
+// The Search provider
 const SshSearchProvider = class SshSearchProvider {
-    constructor() {
+    constructor(settings) {
         // Since gnome-shell 3.6 the log output is in ~/.cache/gdm/session.log
         // Since gnome-shell 3.8 the log output is in /var/log/messages
         // Since gnome-shell 3.10 you get log output with "journalctl -f"
         //log('init ssh-search');
-        let ex;
-
         this.id = imports.misc.extensionUtils.getCurrentExtension().uuid;
-        this._settings = Convenience.getSettings();
-
-        let app_id = this._settings.get_string('terminal-application');
-        this.appInfo = Gio.DesktopAppInfo.new(app_id);
+        this._settings = settings;
 
         this.title = "SSHSearch";
         this._configHosts = [];
@@ -83,35 +73,43 @@ const SshSearchProvider = class SshSearchProvider {
         this._sshknownHosts2 = [];
         this._terminal_definition = null;
 
+        this.appInfo = Gio.DesktopAppInfo.new(this._settings.get_string('terminal-application'));
+
         let filename = '';
 
         // init for ~/.ssh/config
         filename = GLib.build_filenamev([GLib.get_home_dir(), '/.ssh/', 'config']);
         let configFile = Gio.file_new_for_path(filename);
-        this.configMonitor = configFile.monitor_file(Gio.FileMonitorFlags.NONE, null);
-        this.configMonitor.connect('changed', this._onConfigChanged.bind(this));
+        this._configMonitor = configFile.monitor_file(Gio.FileMonitorFlags.NONE, null);
+        this._configMonitor.connect('changed', this._onConfigChanged.bind(this));
         this._onConfigChanged(null, configFile, null, Gio.FileMonitorEvent.CREATED);
 
         // init for ~/.ssh/known_hosts
         filename = GLib.build_filenamev([GLib.get_home_dir(), '/.ssh/', 'known_hosts']);
         let knownhostsFile = Gio.file_new_for_path(filename);
-        this.knownhostsMonitor = knownhostsFile.monitor_file(Gio.FileMonitorFlags.NONE, null);
-        this.knownhostsMonitor.connect('changed', this._onKnownhostsChanged.bind(this));
+        this._knownhostsMonitor = knownhostsFile.monitor_file(Gio.FileMonitorFlags.NONE, null);
+        this._knownhostsMonitor.connect('changed', this._onKnownhostsChanged.bind(this));
         this._onKnownhostsChanged(null, knownhostsFile, null, Gio.FileMonitorEvent.CREATED);
 
         // init for /etc/ssh/ssh_known_hosts
         let sshknownhostsFile1 = Gio.file_new_for_path('/etc/ssh/ssh_known_hosts');
-        this.sshknownhostsMonitor1 = sshknownhostsFile1.monitor_file(Gio.FileMonitorFlags.NONE, null);
-        this.sshknownhostsMonitor1.connect('changed', this._onSshKnownhosts1Changed.bind(this));
+        this._sshknownhostsMonitor1 = sshknownhostsFile1.monitor_file(Gio.FileMonitorFlags.NONE, null);
+        this._sshknownhostsMonitor1.connect('changed', this._onSshKnownhosts1Changed.bind(this));
         this._onSshKnownhosts1Changed(null, sshknownhostsFile1, null, Gio.FileMonitorEvent.CREATED);
 
         // init for /etc/ssh_known_hosts
         let sshknownhostsFile2 = Gio.file_new_for_path('/etc/ssh_known_hosts');
-        this.sshknownhostsMonitor2 = sshknownhostsFile2.monitor_file(Gio.FileMonitorFlags.NONE, null);
-        this.sshknownhostsMonitor2.connect('changed', this._onSshKnownhosts2Changed.bind(this));
+        this._sshknownhostsMonitor2 = sshknownhostsFile2.monitor_file(Gio.FileMonitorFlags.NONE, null);
+        this._sshknownhostsMonitor2.connect('changed', this._onSshKnownhosts2Changed.bind(this));
         this._onSshKnownhosts2Changed(null, sshknownhostsFile2, null, Gio.FileMonitorEvent.CREATED);
 
-        this.onTerminalApplicationChangedSignal = this._settings.connect('changed::terminal-application', this._on_terminal_application_change.bind(this));
+    }
+
+    _cleanup() {
+        this._configMonitor.cancel();
+        this._knownhostsMonitor.cancel();
+        this._sshknownhostsMonitor1.cancel();
+        this._sshknownhostsMonitor2.cancel();
     }
 
     _onConfigChanged(filemonitor, file, other_file, event_type) {
@@ -356,31 +354,58 @@ const SshSearchProvider = class SshSearchProvider {
             return FALLBACK_TERMINAL;
         }
     }
+};
+
+// The extension
+const SshSearchProviderExtension = class SshSearchProviderExtension {
+
+    constructor() {
+        this._onTerminalApplicationChangedSignal = null;
+        this._settings = null;
+        this._sshSearchProvider = null;
+    }
 
     _on_terminal_application_change() {
-        disable();
-        enable();
+        this._unregisterProvider();
+        this._registerProvider();
+    }
+
+    _registerProvider() {
+        if ( ! this._sshSearchProvider) {
+            this._sshSearchProvider = new SshSearchProvider(this._settings);
+            Main.overview.viewSelector._searchResults._registerProvider(this._sshSearchProvider);
+        }
+    }
+
+    enable() {
+        if ( ! this._settings ) {
+            this._settings = Convenience.getSettings();
+        }
+        if ( ! this._onTerminalApplicationChangedSignal ) {
+            this._onTerminalApplicationChangedSignal = this._settings.connect('changed::terminal-application',
+                                                                              this._on_terminal_application_change.bind(this));
+        }
+        this._registerProvider();
+    }
+
+    _unregisterProvider() {
+        if ( this._sshSearchProvider ) {
+            Main.overview.viewSelector._searchResults._unregisterProvider(this._sshSearchProvider);
+            this._sshSearchProvider._cleanup();
+            this._sshSearchProvider = null;
+        }
+    }
+
+    disable() {
+        this._unregisterProvider();
+        if ( this._onTerminalApplicationChangedSignal ) {
+            this._settings.disconnect(this._onTerminalApplicationChangedSignal);
+            this._onTerminalApplicationChangedSignal = null;
+        }
+        this._settings = null;
     }
 };
 
 function init() {
-}
-
-function enable() {
-    if (!sshSearchProvider) {
-        sshSearchProvider = new SshSearchProvider();
-        Main.overview.viewSelector._searchResults._registerProvider(sshSearchProvider);
-    }
-}
-
-function disable() {
-    if  (sshSearchProvider) {
-        Main.overview.viewSelector._searchResults._unregisterProvider(sshSearchProvider);
-        sshSearchProvider.configMonitor.cancel();
-        sshSearchProvider.knownhostsMonitor.cancel();
-        sshSearchProvider.sshknownhostsMonitor1.cancel();
-        sshSearchProvider.sshknownhostsMonitor2.cancel();
-        sshSearchProvider._settings.disconnect(sshSearchProvider.onTerminalApplicationChangedSignal);
-        sshSearchProvider = null;
-    }
+    return new SshSearchProviderExtension();
 }
