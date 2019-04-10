@@ -278,8 +278,6 @@ const SshSearchProvider = class SshSearchProvider {
                                                             GLib.build_filenamev([GLib.get_home_dir(), '/.ssh/', 'known_hosts'])));
         this._hostsSources.push(new SshKnownHostsSourceFile(this._logger, '/etc/ssh_known_hosts'));
         this._hostsSources.push(new SshKnownHostsSourceFile(this._logger, '/etc/ssh/ssh_known_hosts'));
-
-        this._terminal_definition = null;
     }
 
     _cleanup() {
@@ -297,13 +295,12 @@ const SshSearchProvider = class SshSearchProvider {
     }
 
     _createIcon(size) {
-        return new St.Icon({ icon_name: this._terminal_definition.exec,
+        return new St.Icon({ gicon: this.appInfo.get_icon(),
                              icon_size: size });
     }
 
     getResultMetas(resultIds, callback) {
         this._logger.log_debug('SshSearchProvider.getResultMetas('+resultIds+')');
-        this._terminal_definition = this._getDefaultTerminal();
         let results = [];
         for (let i = 0 ; i < resultIds.length; ++i ) {
             results.push({ 'id': resultIds[i],
