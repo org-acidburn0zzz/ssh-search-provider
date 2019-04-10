@@ -259,11 +259,15 @@ const SshSearchProvider = class SshSearchProvider {
         this._lastSearchHadUserPart = false;
 
         for (let ti=0; ti < terms.length; ti++) {
-            let term_parts = terms[ti].split('@');
-            let host = term_parts[term_parts.length-1];
             let user = null;
-            if (term_parts.length > 1) {
-                user = term_parts[0];
+            let host = terms[ti];
+            let host_at_sign = host.indexOf('@');
+            if (host_at_sign == 0 || host_at_sign == host.length-1) {
+                // Invalid user name or nothing after @ sign: skip search term
+                continue;
+            } else if (host_at_sign > 0) {
+                user = host.slice(0, host_at_sign);
+                host = host.slice(host_at_sign+1);
                 this._lastSearchHadUserPart = true;
             }
 
@@ -300,6 +304,10 @@ const SshSearchProvider = class SshSearchProvider {
         for (let ti=0; ti < terms.length; ti++) {
             let term = terms[ti];
             let termAtIndex = term.indexOf('@');
+            if (termAtIndex == term.length-1) {
+                // Skip term if nothing is present after the @ sign.
+                continue;
+            }
             if ( (termAtIndex >= 0  && ! this._lastSearchHadUserPart )
                  || (termAtIndex < 0 && this._lastSearchHadUserPart ) ) {
                 // If the query switches from having to not having a user
