@@ -251,7 +251,7 @@ const SshSearchProvider = class SshSearchProvider {
         return providerResults;
     }
 
-    _getResultSet(sessions, terms) {
+    _getResultSet(terms) {
         // check if a found host-name begins like the search-term
         let resultsDict = {};
 
@@ -289,12 +289,12 @@ const SshSearchProvider = class SshSearchProvider {
 
     getInitialResultSet(terms, cb) {
         this._logger.log_debug('SshSearchProvider.getInitialResultSet('+terms+')');
-        cb(this._getResultSet(null, terms));
+        cb(this._getResultSet(terms));
     }
 
     getSubsearchResultSet(previousResults, terms, cb) {
         this._logger.log_debug('SshSearchProvider.getSubsearchResultSet('+terms+')');
-        cb(this._getResultSet(null, terms));
+        cb(this._getResultSet(terms));
     }
 
     // try to find the default terminal app. fallback is gnome-terminal
