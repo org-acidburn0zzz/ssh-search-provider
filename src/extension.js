@@ -135,7 +135,7 @@ const SshKnownHostsSourceFile = class SshKnownHostsSourceFile extends HostsSourc
 
             // if hostname had a 60 char length, it looks like
             // the hostname is hashed and we ignore it here
-            if (hostnames[0] != '#' && (hostnames.length != 60 || hostnames.search(',') >= 0)) {
+            if (hostnames.length > 0 && hostnames[0] != '#' && (hostnames.length != 60 || hostnames.search(',') >= 0)) {
                 hostnames = hostnames.split(',');
                 for (let j=0; j<hostnames.length; j++) {
                     hostsDict[hostnames[j]] = 1;
