@@ -58,41 +58,149 @@ const HostsSourceFile = class HostsSourceFile {
 
     constructor(logger, path) {
         this._logger = logger;
-        this._path = path;
-        this._file = Gio.file_new_for_path(this._path);
-        this._monitor = this._file.monitor_file(Gio.FileMonitorFlags.NONE, null);
-        this._changedSignal = this._monitor.connect('changed', this.onFileChange.bind(this));
+        this._lastSearchHadUserPart = null;
         this._hosts = [];
-        this.onFileChange(this._monitor, this._file, null, Gio.FileMonitorEvent.CREATED);
+
+        this._canonicalPath = path;
+        this._canonicalFile = Gio.file_new_for_path(this._canonicalPath);
+
+        this._path = this._canonicalPath;
+        this._file = this._canonicalFile;
+
+        this._symlinkTarget = null;
+        this._symlinkPath = null;
+        this._symlinkFile = null;
+
+        this._symlinkChangeMonitor = null;
+        this._symlinkChangeSignal = null;
+
+        this._fileChangeMonitor = this._file.monitor_file(Gio.FileMonitorFlags.NONE, null);
+        this._fileChangeSignal = this._fileChangeMonitor.connect('changed', this.onFileChange.bind(this));
+
+        this.onFileChange(this._fileChangeMonitor, this._file, null, Gio.FileMonitorEvent.CHANGES_DONE_HINT);
     }
 
     cleanup() {
-        this._monitor.disconnect(this._changedSignal);
-        this._changedSignal = null;
-        this._monitor.cancel();
-        this._monitor = null;
+        if (this._symlinkChangeMonitor != null) {
+            this._symlinkChangeMonitor.disconnect(this._symlinkChangeSignal);
+            this._symlinkChangeSignal = null;
+            this._symlinkChangeMonitor.cancel();
+            this._symlinkChangeMonitor = null;
+        }
+        this._fileChangeMonitor.disconnect(this._fileChangeSignal);
+        this._fileChangeSignal = null;
+        this._fileChangeMonitor.cancel();
+        this._fileChangeMonitor = null;
     }
 
     getHosts() {
         return this._hosts;
     }
 
-    onFileChange(filemonitor, file, other_file, event_type) {
-        this._logger.log_debug('HostsSourceFile.onFileChange('+file.get_path()+')');
-        if (!file.query_exists (null)) {
-            this._hosts = [];
-            return;
+    _changeLinkTarget(target) {
+        this._symlinkTarget = target;
+        this._path = this._symlinkTarget;
+        if (this._path[0] != '/') {
+            this._path = this._symlinkFile.get_parent().get_path() + '/' + this._path;
         }
+        this._file = Gio.file_new_for_path(this._path);
+        this._fileChangeMonitor = this._file.monitor_file(Gio.FileMonitorFlags.NONE, null);
+        this._fileChangeSignal = this._fileChangeMonitor.connect('changed', this.onFileChange.bind(this));
+    }
 
-        if (event_type == Gio.FileMonitorEvent.CREATED ||
-            event_type == Gio.FileMonitorEvent.CHANGED ||
-            event_type == Gio.FileMonitorEvent.CHANGES_DONE_HINT)
-        {
-            let contents = file.load_contents(null);
-            let filelines = ByteArray_toString(contents[1]).trim().split('\n');
+    onSymlinkChange(filemonitor, file, other_file, event_type) {
+        if ( ( this._symlinkFile == null
+               || file.get_path() == this._symlinkFile.get_path()
+             ) && ( event_type == Gio.FileMonitorEvent.CHANGES_DONE_HINT
+                    || event_type == Gio.FileMonitorEvent.DELETED)) {
+
+            this._logger.log_debug('HostsSourceFile.onSymlinkChange('+file.get_path()+', '+event_type+')');
+            let queryinfo;
+            let ex;
+            try {
+                queryinfo = this._canonicalFile.query_info('standard',0, null);
+            } catch (ex) {
+                this._logger.log_debug('HostsSourceFile.onSymlinkChange('+file.get_path()+'): '
+                                       +'file doesn\'t exist: '+ex);
+            }
+            if (queryinfo != null && queryinfo.get_is_symlink()) {
+                let curLinkTarget = queryinfo.get_symlink_target();
+                if (curLinkTarget == this._symlinkTarget) {
+                    this._logger.log_debug('HostsSourceFile.onSymlinkChange('+file.get_path()+'): '
+                                           +'symlink target still '+this._symlinkTarget);
+                } else if (this._symlinkTarget == null) {
+                    this._logger.log_debug('HostsSourceFile.onSymlinkChange('+file.get_path()+'): '
+                                           +'changed from regular to symlink to '+curLinkTarget);
+
+                    this._fileChangeMonitor.disconnect(this._fileChangeSignal);
+                    this._symlinkPath = this._path;
+                    this._symlinkFile = this._file;
+                    this._symlinkChangeMonitor = this._fileChangeMonitor;
+                    this._symlinkChangeSignal = this._symlinkChangeMonitor.connect('changed', this.onSymlinkChange.bind(this));
+
+                    this._changeLinkTarget(curLinkTarget);
+                } else {
+                    this._logger.log_debug('HostsSourceFile.onSymlinkChange('+file.get_path()+'): '
+                                           +'symlink target changed from '+this._symlinkTarget+' to '+curLinkTarget);
+
+                    this._fileChangeMonitor.disconnect(this._fileChangeSignal);
+                    this._fileChangeMonitor.cancel();
+
+                    this._changeLinkTarget(curLinkTarget);
+
+                    this._logger.log_debug('HostsSourceFile.onSymlinkChange('+file.get_path()+'): triggering onFileChange()');
+                    this.onFileChange(this._fileChangeMonitor, this._file, null, Gio.FileMonitorEvent.CHANGES_DONE_HINT);
+                }
+            } else {
+                if (this._symlinkTarget == null) {
+                    this._logger.log_debug('HostsSourceFile.onSymlinkChange('+file.get_path()+'): '
+                                           +'still not a symlink');
+                } else {
+                    this._logger.log_debug('HostsSourceFile.onSymlinkChange('+file.get_path()+'): '
+                                           +'changed from symlink to regular');
+
+                    this._fileChangeMonitor.disconnect(this._fileChangeSignal);
+                    this._fileChangeMonitor.cancel();
+
+                    this._symlinkChangeMonitor.disconnect(this._symlinkChangeSignal);
+
+                    this._path = this._symlinkPath;
+                    this._file = this._symlinkFile;
+                    this._fileChangeMonitor = this._symlinkChangeMonitor;
+
+                    this._symlinkTarget = null;
+                    this._symlinkFile = null;
+                    this._symlinkPath = null;
+                    this._symlinkChangeMonitor = null;
+                    this._symlinkChangeSignal = null;
+
+                    this._fileChangeMonitor.connect('changed', this.onFileChange.bind(this));
+                    this._logger.log_debug('HostsSourceFile.onSymlinkChange('+file.get_path()+'): triggering onFileChange()');
+                    this.onFileChange(this._fileChangeMonitor, this._file, null, Gio.FileMonitorEvent.CHANGES_DONE_HINT);
+                }
+            }
+        }
+    }
+
+    onFileChange(filemonitor, file, other_file, event_type) {
+        if (file.get_path() == this._file.get_path()
+            && (event_type == Gio.FileMonitorEvent.CHANGES_DONE_HINT
+                || event_type == Gio.FileMonitorEvent.DELETED)) {
+
+            this._logger.log_debug('HostsSourceFile.onFileChange('+file.get_path()+', '+event_type+')');
+
+            if (this._symlinkTarget == null) {
+                this._logger.log_debug('HostsSourceFile.onFileChange('+file.get_path()+'): triggering onSymlinkChange()');
+                this.onSymlinkChange(null, this._canonicalFile, null, event_type);
+            }
+
             let hosts = [];
-            for (let i in this.parse(filelines)) {
-                hosts.push(i);
+            if (file.query_exists (null)) {
+                let contents = this._canonicalFile.load_contents(null);
+                let filelines = ByteArray_toString(contents[1]).trim().split('\n');
+                for (let i in this.parse(filelines)) {
+                    hosts.push(i);
+                }
             }
             this._hosts = hosts;
             this._logger.log_debug('HostsSourceFile.onFileChange('+file.get_path()+') = '
