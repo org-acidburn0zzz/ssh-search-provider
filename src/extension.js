@@ -16,14 +16,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 const Main = imports.ui.main;
-const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
-const Search = imports.ui.search;
-const Shell = imports.gi.Shell;
 const St = imports.gi.St;
 const Util = imports.misc.util;
-const IconGrid = imports.ui.iconGrid;
 const ByteArray = imports.byteArray;
 
 const ExtensionUtils = imports.misc.extensionUtils;
