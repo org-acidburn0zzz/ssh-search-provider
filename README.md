@@ -14,14 +14,15 @@ project which has been unmaintained for a while.
 
 ## Features
 
- * it parses the ~/.ssh/config file and searches for the host names
+ * It parses `~/.ssh/config`, `/etc/ssh/ssh_config` and
+   `/etc/ssh_config` files (if they exist) and searches for host names.
 
- * it parses the ~/.ssh/known_hosts file and reads all host names (to
-   use this feature you have to set the ssh setting "HashKnownHosts"
-   to "no")
+ * It parses `~/.ssh/known_hosts`, `/etc/ssh/ssh_known_hosts` and
+   `/etc/ssh_known_hosts` files (if they exist) and reads all host
+   names (to use this feature you have to set the ssh setting
+   "HashKnownHosts" to "no").
 
- * you are able to define a user for the founded hosts in the search
-   term
+ * You can prepend a hostname with a username as in `user@host`.
 
 ## Examples
 
