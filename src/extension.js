@@ -218,7 +218,14 @@ const SshSearchProvider = class SshSearchProvider {
         cmd.push.apply(cmd, terminal_definition.args.trim().split(/\s+/))
 
         let host = id;
+        let user = null;
         let port = null;
+
+        let atIndex = host.indexOf('@');
+        if (atIndex >= 0) {
+            user = host.slice(0, atIndex);
+            host = host.slice(atIndex+1);
+        }
 
         if (host[0] == '[') {
             let parts = host.slice(1).split(']:');
@@ -226,6 +233,10 @@ const SshSearchProvider = class SshSearchProvider {
                 host = parts[0];
                 port = parts[1];
             }
+        }
+
+        if (user != null) {
+            host = user + '@' + host;
         }
 
         let sshCmd;
