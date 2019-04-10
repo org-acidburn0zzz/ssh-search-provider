@@ -35,6 +35,8 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 
+const Logger = Me.imports.logger;
+
 // Settings
 const DEFAULT_TERMINAL_SCHEMA = 'org.gnome.desktop.default-applications.terminal';
 const DEFAULT_TERMINAL_KEY = 'exec';
@@ -58,13 +60,16 @@ if (ByteArray.toString(ByteArray.fromString('X')) == 'X') {
 
 // The Search provider
 const SshSearchProvider = class SshSearchProvider {
-    constructor(settings) {
+    constructor(extension) {
         // Since gnome-shell 3.6 the log output is in ~/.cache/gdm/session.log
         // Since gnome-shell 3.8 the log output is in /var/log/messages
         // Since gnome-shell 3.10 you get log output with "journalctl -f"
         //log('init ssh-search');
         this.id = imports.misc.extensionUtils.getCurrentExtension().uuid;
-        this._settings = settings;
+        this._settings = extension._settings;
+        this._logger = extension._logger;
+
+        this._logger.log_debug('SshSearchProvider.constructor()');
 
         this.title = "SSHSearch";
         this._configHosts = [];
@@ -106,6 +111,8 @@ const SshSearchProvider = class SshSearchProvider {
     }
 
     _cleanup() {
+        this._logger.log_debug('SshSearchProvider._cleanup()');
+
         this._configMonitor.cancel();
         this._knownhostsMonitor.cancel();
         this._sshknownhostsMonitor1.cancel();
@@ -113,6 +120,7 @@ const SshSearchProvider = class SshSearchProvider {
     }
 
     _onConfigChanged(filemonitor, file, other_file, event_type) {
+        this._logger.log_debug('SshSearchProvider._onConfigChanged('+file.get_path()+')');
         if (!file.query_exists (null)) {
             this._configHosts = [];
             return;
@@ -143,6 +151,7 @@ const SshSearchProvider = class SshSearchProvider {
     }
 
     _onKnownhostsChanged(filemonitor, file, other_file, event_type) {
+        this._logger.log_debug('SshSearchProvider._onKnownhostsChanged('+file.get_path()+')');
         if (!file.query_exists (null)) {
             this._knownHosts = [];
             return;
@@ -157,6 +166,7 @@ const SshSearchProvider = class SshSearchProvider {
     }
 
     _onSshKnownhosts1Changed(filemonitor, file, other_file, event_type) {
+        this._logger.log_debug('SshSearchProvider._onKnownhosts1Changed('+file.get_path()+')');
         if (!file.query_exists (null)) {
             this._sshknownHosts1 = [];
             return;
@@ -171,6 +181,7 @@ const SshSearchProvider = class SshSearchProvider {
     }
 
     _onSshKnownhosts2Changed(filemonitor, file, other_file, event_type) {
+        this._logger.log_debug('SshSearchProvider._onKnownhosts2Changed('+file.get_path()+')');
         if (!file.query_exists (null)) {
             this._sshknownHosts2 = [];
             return;
@@ -185,6 +196,7 @@ const SshSearchProvider = class SshSearchProvider {
     }
 
     _parseKnownHosts(file) {
+        this._logger.log_debug('SshSearchProvider._parseKnownHosts('+file.get_path()+')');
         let knownHosts = [];
 
         // read hostnames if ssh-known_hosts file is created or changed
@@ -208,6 +220,7 @@ const SshSearchProvider = class SshSearchProvider {
 
     // Search API
     createResultObject(result, terms) {
+        // this._logger.log_debug('SshSearchProvider.createResultObject('+terms+')');
         return null;
     }
 
@@ -217,6 +230,7 @@ const SshSearchProvider = class SshSearchProvider {
     }
 
     getResultMetas(resultIds, callback) {
+        this._logger.log_debug('SshSearchProvider.getResultMetas('+resultIds+')');
         this._terminal_definition = this._getDefaultTerminal();
         let results = [];
         for (let i = 0 ; i < resultIds.length; ++i ) {
@@ -229,6 +243,7 @@ const SshSearchProvider = class SshSearchProvider {
     }
 
     activateResult(id) {
+        this._logger.log_debug('SshSearchProvider.activateResult('+id+')');
         let target = id;
         let terminal_definition = this._getDefaultTerminal();
         let cmd = [terminal_definition.exec]
@@ -258,10 +273,12 @@ const SshSearchProvider = class SshSearchProvider {
         }
 
         // start terminal with ssh command
+        this._logger.log_debug('SshSearchProvider.activateResult(): cmd='+cmd);
         Util.spawn(cmd);
     }
 
     _checkHostnames(resultsDict, hostnames, terms) {
+        this._logger.log_debug('SshSearchProvider._checkHostnames()');
         for (var i=0; i<hostnames.length; i++) {
             for (var j=0; j<terms.length; j++) {
                 try {
@@ -300,10 +317,12 @@ const SshSearchProvider = class SshSearchProvider {
     }
 
     filterResults(providerResults, maxResults) {
+        this._logger.log_debug('SshSearchProvider.filterResults('+maxResults+')');
         return providerResults;
     }
 
     _getResultSet(sessions, terms) {
+        this._logger.log_debug('SshSearchProvider._getResultSet('+terms+')');
         // check if a found host-name begins like the search-term
         let resultsDict = {};
         let res = terms.map(function (term) { return new RegExp(term, 'i'); });
@@ -321,10 +340,12 @@ const SshSearchProvider = class SshSearchProvider {
     }
 
     getInitialResultSet(terms, cb) {
+        this._logger.log_debug('SshSearchProvider.getInitialResultSet('+terms+')');
         cb(this._getResultSet(null, terms));
     }
 
     getSubsearchResultSet(previousResults, terms, cb) {
+        this._logger.log_debug('SshSearchProvider.getSubsearchResultSet('+terms+')');
         cb(this._getResultSet(null, terms));
     }
 
@@ -360,35 +381,61 @@ const SshSearchProvider = class SshSearchProvider {
 const SshSearchProviderExtension = class SshSearchProviderExtension {
 
     constructor() {
+        this._logger = null;
+        this._debugSettingChangedConnection = null;
         this._onTerminalApplicationChangedSignal = null;
         this._settings = null;
         this._sshSearchProvider = null;
     }
 
+    _on_debug_change() {
+        this._logger.set_debug(this._settings.get_boolean('debug'));
+        this._logger.log_debug('SshSearchProviderExtension._on_debug_change(): debug = '+this._logger.get_debug());
+    }
+
     _on_terminal_application_change() {
+        this._logger.log_debug('SshSearchProviderExtension._on_terminal_application_change()');
         this._unregisterProvider();
         this._registerProvider();
     }
 
     _registerProvider() {
+        this._logger.log_debug('SshSearchProviderExtension._registerProvider()');
         if ( ! this._sshSearchProvider) {
-            this._sshSearchProvider = new SshSearchProvider(this._settings);
+            this._sshSearchProvider = new SshSearchProvider(this);
             Main.overview.viewSelector._searchResults._registerProvider(this._sshSearchProvider);
         }
     }
 
     enable() {
+
+        if ( ! this._logger ) {
+            this._logger = new Logger.Logger('Ssh-Search-Provider');
+        }
+
         if ( ! this._settings ) {
             this._settings = Convenience.getSettings();
         }
+
+        this._on_debug_change();
+        this._logger.log_debug('SshSearchProviderExtension.enable()');
+
+        if ( ! this._onDebugChangedSignal ) {
+            this._onDebugChangedSignal = this._settings.connect('changed::debug', this._on_debug_change.bind(this));
+        }
+
         if ( ! this._onTerminalApplicationChangedSignal ) {
             this._onTerminalApplicationChangedSignal = this._settings.connect('changed::terminal-application',
                                                                               this._on_terminal_application_change.bind(this));
         }
+
         this._registerProvider();
+
+        this._logger.log_debug('extension enabled');
     }
 
     _unregisterProvider() {
+        this._logger.log_debug('SshSearchProviderExtension._unregisterProvider()');
         if ( this._sshSearchProvider ) {
             Main.overview.viewSelector._searchResults._unregisterProvider(this._sshSearchProvider);
             this._sshSearchProvider._cleanup();
@@ -397,12 +444,25 @@ const SshSearchProviderExtension = class SshSearchProviderExtension {
     }
 
     disable() {
+
+        this._logger.log_debug('SshSearchProviderExtension.disable()');
+
         this._unregisterProvider();
+
         if ( this._onTerminalApplicationChangedSignal ) {
             this._settings.disconnect(this._onTerminalApplicationChangedSignal);
             this._onTerminalApplicationChangedSignal = null;
         }
+
+        if (this._onDebugChangedSignal) {
+            this._settings.disconnect(this._onDebugChangedSignal);
+            this._onDebugChangedSignal = null;
+        }
+
         this._settings = null;
+
+        this._logger.log_debug('extension disabled');
+        this._logger = null;
     }
 };
 

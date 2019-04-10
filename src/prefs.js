@@ -1,24 +1,19 @@
-/* -*- mode: js; indent-tabs-mode: nil; js-indent-level: 4 -*-
- *
- * Ssh Search Provider for Gnome Shell
- *
- * Copyright (C) 2019 Philippe Troin (F-i-f on Github)
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// Ssh Search Provider for Gnome Shell
+// Copyright (C) 2019 Philippe Troin (F-i-f on Github)
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-const Lang = imports.lang;
 const Gio = imports.gi.Gio;
 const GObject = imports.gi.GObject;
 const Gtk = imports.gi.Gtk;
@@ -29,6 +24,8 @@ const Convenience = Me.imports.convenience;
 
 const Gettext = imports.gettext.domain(Me.metadata['gettext-domain']);
 const _ = Gettext.gettext;
+
+const Logger = Me.imports.logger;
 
 const ArgumentsForTerminalApp = {
     'guake.desktop':		  { args: '-n new -e', single: true },
@@ -50,6 +47,8 @@ const SshSearchProviderSettings = GObject.registerClass(class SshSearchProviderS
 	this.orientation = Gtk.Orientation.VERTICAL;
 
 	this._settings = Convenience.getSettings();
+	this._logger = new Logger.Logger('Ssh-Search-Provider/prefs');
+	this._logger.set_debug(this._settings.get_boolean('debug'));
 
 	let ypos = 1;
 	let descr;
@@ -68,7 +67,7 @@ const SshSearchProviderSettings = GObject.registerClass(class SshSearchProviderS
 	this.version_label = new Gtk.Label({
 	    use_markup: true,
 	    label: '<span size="small">'+_('Version')
-		+ ' ' + Me.metadata['version']+' / git '+Me.metadata['vcs_revision'] + '</span>',
+		+ ' ' + this._logger.get_version() + '</span>',
 	    hexpand: true,
 	    halign: Gtk.Align.CENTER,
 	});
@@ -130,6 +129,17 @@ const SshSearchProviderSettings = GObject.registerClass(class SshSearchProviderS
 	this.attach(this.ssh_single_arg_label,   1, ypos, 1, 1);
 	this.attach(this.ssh_single_arg_control, 2, ypos, 1, 1);
 	this._settings.bind('ssh-command-single-argument', this.ssh_single_arg_control, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+	ypos += 1;
+
+	descr = _(this._settings.settings_schema.get_key('debug').get_description());
+	this.debug_label = new Gtk.Label({label: _("Debug:"), halign: Gtk.Align.START});
+	this.debug_label.set_tooltip_text(descr);
+	this.debug_control = new Gtk.Switch({halign: Gtk.Align.END});
+	this.debug_control.set_tooltip_text(descr);
+	this.attach(this.debug_label,   1, ypos, 1, 1);
+	this.attach(this.debug_control, 2, ypos, 1, 1);
+	this._settings.bind('debug', this.debug_control, 'active', Gio.SettingsBindFlags.DEFAULT);
 
 	ypos += 1;
 

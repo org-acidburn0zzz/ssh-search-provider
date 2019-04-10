@@ -24,5 +24,10 @@
       passed as multiple arguments.  Depends on the Terminal Emulator
       Application used.</description>
     </key>
+    <key name="debug" type="b">
+      <default>false</default>
+      <summary>Debugging.</summary>
+      <description>Enable debugging for the extension.</description>
+    </key>
   </schema>
 </schemalist>
