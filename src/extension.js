@@ -251,16 +251,20 @@ const SshSearchProvider = class SshSearchProvider {
         return providerResults;
     }
 
-    _getResultSet(terms) {
+    getInitialResultSet(terms, cb) {
+        this._logger.log_debug('SshSearchProvider.getInitialResultSet('+terms+')');
+
         // check if a found host-name begins like the search-term
         let resultsDict = {};
+        this._lastSearchHadUserPart = false;
 
         for (let ti=0; ti < terms.length; ti++) {
             let term_parts = terms[ti].split('@');
             let host = term_parts[term_parts.length-1];
-            let user = '';
+            let user = null;
             if (term_parts.length > 1) {
                 user = term_parts[0];
+                this._lastSearchHadUserPart = true;
             }
 
             for (let hsi=0; hsi < this._hostsSources.length; ++hsi) {
@@ -268,7 +272,7 @@ const SshSearchProvider = class SshSearchProvider {
                 for (let i=0; i < hostnames.length; i++) {
                     if (hostnames[i].indexOf(host) >= 0) {
                         let ssh_name = hostnames[i];
-                        if (user.length != 0) {
+                        if (user != null) {
                             ssh_name = user + '@' + ssh_name;
                         }
                         resultsDict[ssh_name] = 1;
@@ -282,19 +286,46 @@ const SshSearchProvider = class SshSearchProvider {
             results.push(i);
         }
 
-        this._logger.log_debug('SshSearchProvider._getResultSet('+terms+') = ' + results.length + '[' + results + ']');
+        this._logger.log_debug('SshSearchProvider.getInitialResultSet('+terms+') = '
+                               + results.length + '[' + results + ']');
 
-        return results;
-    }
-
-    getInitialResultSet(terms, cb) {
-        this._logger.log_debug('SshSearchProvider.getInitialResultSet('+terms+')');
-        cb(this._getResultSet(terms));
+        cb(results);
     }
 
     getSubsearchResultSet(previousResults, terms, cb) {
         this._logger.log_debug('SshSearchProvider.getSubsearchResultSet('+terms+')');
-        cb(this._getResultSet(terms));
+        let results;
+
+        results = [];
+        for (let ti=0; ti < terms.length; ti++) {
+            let term = terms[ti];
+            let termAtIndex = term.indexOf('@');
+            if ( (termAtIndex >= 0  && ! this._lastSearchHadUserPart )
+                 || (termAtIndex < 0 && this._lastSearchHadUserPart ) ) {
+                // If the query switches from having to not having a user
+                // part, we must restart the search from scratch.
+                this.getInitialResultSet(terms, cb);
+                return;
+            }
+            let termHost = term;
+            if (termAtIndex >= 0) {
+                termHost = term.slice(termAtIndex+1);
+            }
+            for (let i=0; i < previousResults.length; ++i) {
+                let previousResult = previousResults[i];
+                let previousResultAtIndex = previousResult.indexOf('@');
+                let previousHost = previousResult;
+                if (previousResultAtIndex >= 0) {
+                    previousHost = previousResult.slice(previousResultAtIndex+1);
+                }
+                if (previousHost.indexOf(termHost) >= 0) {
+                    results.push(previousResult);
+                }
+            }
+        }
+        this._logger.log_debug('SshSearchProvider.getSubsearchResultSet('+terms+') = '
+                               + results.length + '[' + results + ']');
+        cb(results);
     }
 
     // try to find the default terminal app. fallback is gnome-terminal
