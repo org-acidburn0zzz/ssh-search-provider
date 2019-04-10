@@ -213,26 +213,26 @@ const SshSearchProvider = class SshSearchProvider {
 
     activateResult(id) {
         this._logger.log_debug('SshSearchProvider.activateResult('+id+')');
-        let target = id;
         let terminal_definition = this._getDefaultTerminal();
         let cmd = [terminal_definition.exec]
         cmd.push.apply(cmd, terminal_definition.args.trim().split(/\s+/))
 
-        let colonIndex = target.indexOf(':');
-        let port = 22;
-        if (colonIndex >= 0) {
-            port = target.substr(colonIndex+1)+0;
-            target = target.substr(colonIndex);
+        let host = id;
+        let port = null;
+
+        if (host[0] == '[') {
+            let parts = host.slice(1).split(']:');
+            if (parts.length == 2) {
+                host = parts[0];
+                port = parts[1];
+            }
         }
 
         let sshCmd;
-        if (port == 22) {
-            // don't call with the port option, because the host definition
-            // could be from the ~/.ssh/config file
-            sshCmd = ['ssh', target];
-        }
-        else {
-            sshCmd = ['ssh', '-p', id.port, target];
+        if (port == null) {
+            sshCmd = ['ssh', host];
+        } else {
+            sshCmd = ['ssh', '-p', port, host];
         }
 
         if (terminal_definition.single) {
