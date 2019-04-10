@@ -254,7 +254,6 @@ const SshSearchProvider = class SshSearchProvider {
     _getResultSet(sessions, terms) {
         // check if a found host-name begins like the search-term
         let resultsDict = {};
-        let res = terms.map(function (term) { return new RegExp(term, 'i'); });
 
         for (let ti=0; ti < terms.length; ti++) {
             let term_parts = terms[ti].split('@');
@@ -267,7 +266,7 @@ const SshSearchProvider = class SshSearchProvider {
             for (let hsi=0; hsi < this._hostsSources.length; ++hsi) {
                 let hostnames = this._hostsSources[hsi].getHosts();
                 for (let i=0; i < hostnames.length; i++) {
-                    if (hostnames[i].match(host)) {
+                    if (hostnames[i].indexOf(host) >= 0) {
                         let ssh_name = hostnames[i];
                         if (user.length != 0) {
                             ssh_name = user + '@' + ssh_name;
