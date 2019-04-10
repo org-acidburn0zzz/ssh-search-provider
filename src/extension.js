@@ -256,40 +256,23 @@ const SshSearchProvider = class SshSearchProvider {
         let resultsDict = {};
         let res = terms.map(function (term) { return new RegExp(term, 'i'); });
 
-        for (let hsi=0; hsi < this._hostsSources.length; ++hsi) {
-            let hostnames = this._hostsSources[hsi].getHosts();
-            for (let i=0; i < hostnames.length; i++) {
-                for (let j=0; j<terms.length; j++) {
-                    try {
-                        let term_parts = terms[j].split('@');
-                        let host = term_parts[term_parts.length-1];
-                        let user = '';
-                        if (term_parts.length > 1) {
-                            user = term_parts[0];
-                        }
-                        if (hostnames[i].match(host)) {
-                            host = hostnames[i];
-                            let port = 22;
+        for (let ti=0; ti < terms.length; ti++) {
+            let term_parts = terms[ti].split('@');
+            let host = term_parts[term_parts.length-1];
+            let user = '';
+            if (term_parts.length > 1) {
+                user = term_parts[0];
+            }
 
-                            // check if hostname is in the format "[ip-address]:port"
-                            if (host[0] == '[') {
-                                let host_port = host.slice(1).split(']:');
-                                host = host_port[0];
-                                port = host_port[1];
-                            }
-
-                            let ssh_name = host;
-                            if (port != 22) {
-                                ssh_name = ssh_name + ':' + port;
-                            }
-                            if (user.length != 0) {
-                                ssh_name = user + '@' + ssh_name;
-                            }
-                            resultsDict[ssh_name] = 1;
+            for (let hsi=0; hsi < this._hostsSources.length; ++hsi) {
+                let hostnames = this._hostsSources[hsi].getHosts();
+                for (let i=0; i < hostnames.length; i++) {
+                    if (hostnames[i].match(host)) {
+                        let ssh_name = hostnames[i];
+                        if (user.length != 0) {
+                            ssh_name = user + '@' + ssh_name;
                         }
-                    }
-                    catch(ex) {
-                        continue;
+                        resultsDict[ssh_name] = 1;
                     }
                 }
             }
