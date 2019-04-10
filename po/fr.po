@@ -1,85 +1,90 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the ssh-search-provider package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-#
+# French translations for the ssh-search-provider gnome shell extension
+# Copyright (C) 2019 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the tweaks-system-menu package.
+# Philippe Troin, 2019.
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: ssh-search-provider\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2019-04-09 18:16-0700\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
+"PO-Revision-Date: 2019-04-09 18:31-0700\n"
+"Last-Translator: Philippe Troin <F-i-f @ github>\n"
+"Language-Team: none\n"
+"Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 #: src/prefs.js:59
 msgid "SSH Search Provider Reborn"
-msgstr ""
+msgstr "Recherche de connections SSH renée"
 
 #: src/prefs.js:69
 msgid "Version"
-msgstr ""
+msgstr "Version"
 
 #: src/prefs.js:92
 msgid "Terminal Application:"
-msgstr ""
+msgstr "Émulateur de terminal :"
 
 #: src/prefs.js:114
 msgid "Arguments:"
-msgstr ""
+msgstr "Arguments :"
 
 #: src/prefs.js:125
 msgid "Pass SSH command line as a single argument:"
-msgstr ""
+msgstr "Passer la ligne de commande SSH en un unique argument :"
 
 #: src/prefs.js:136
 msgid "Debug:"
-msgstr ""
+msgstr "Débogage :"
 
 #: src/prefs.js:149
 msgid ""
 "Copyright © 2017-2019 Philippe Troin (<a href=\"https://github.com/F-i-f\">F-"
 "i-f</a> on GitHub)"
 msgstr ""
+"Copyright © 2017-2019 Philippe Troin (<a href=\"https://github.com/F-i-f\">F-"
+"i-f</a> sur GitHub)"
 
 #: src/prefs.js:151
 msgid "Copyright © 2013 Bernd Schlapsi"
-msgstr ""
+msgstr "Copyright © 2013 Bernd Schlapsi"
 
 #: src/prefs.js:163
 msgid "Choose Terminal Emulator"
-msgstr ""
+msgstr "Choisir un émulateur de terminal"
 
 #: src/prefs.js:168
 msgid "Select"
-msgstr ""
+msgstr "Choisir"
 
 #: schemas/org.gnome.shell.extensions.ssh-search-provider.gschema.xml:7
 msgid "Terminal application."
-msgstr ""
+msgstr "Emulateur de terminal."
 
 #: schemas/org.gnome.shell.extensions.ssh-search-provider.gschema.xml:8
 msgid "The Terminal Application used to launch new SSH sessions with."
 msgstr ""
+"L'émulateur de terminal avec lequel les nouvelles sessions SSH seront "
+"lancées."
 
 #: schemas/org.gnome.shell.extensions.ssh-search-provider.gschema.xml:13
 msgid "Terminal application arguments."
-msgstr ""
+msgstr "Arguments de l'émulateur de terminal."
 
 #: schemas/org.gnome.shell.extensions.ssh-search-provider.gschema.xml:14
 msgid ""
 "The arguments passed to the Terminal Application. The command \"ssh [-p "
 "<port>] [user@]<host>\" is appended after the provided arguments."
 msgstr ""
+"Les arguments passés à l'émulatuer de terminal. La commande \"ssh [-p\n"
+"<port>] [user@]<host>\" sera ajoutée après les arguments fournis."
 
 #: schemas/org.gnome.shell.extensions.ssh-search-provider.gschema.xml:20
 msgid "SSH command line is passed as a single argument."
-msgstr ""
+msgstr "La ligne de commande ssh est passée en un unique argument."
 
 #: schemas/org.gnome.shell.extensions.ssh-search-provider.gschema.xml:21
 msgid ""
@@ -88,11 +93,15 @@ msgid ""
 "and passed as multiple arguments. Depends on the Terminal Emulator "
 "Application used."
 msgstr ""
+"Si la ligne de commande \"ssh [-p <port>] [user@]<host>\" est passée en\n"
+"un unique argument. Sinon, la ligne de commande sera décomposée et\n"
+"passée dans de multiples arguments. Dépend de l'émulateur de terminal\n"
+"choisi."
 
 #: schemas/org.gnome.shell.extensions.ssh-search-provider.gschema.xml:29
 msgid "Debugging."
-msgstr ""
+msgstr "Débogage."
 
 #: schemas/org.gnome.shell.extensions.ssh-search-provider.gschema.xml:30
 msgid "Enable debugging for the extension."
-msgstr ""
+msgstr "Activer le mode débogage de l'extension."
