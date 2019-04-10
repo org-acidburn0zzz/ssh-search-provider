@@ -30,6 +30,9 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 
+const Gettext = imports.gettext.domain(Me.metadata['gettext-domain']);
+const _ = Gettext.gettext;
+
 const Logger = Me.imports.logger;
 
 // Settings
@@ -265,6 +268,7 @@ const SshSearchProvider = class SshSearchProvider {
 
         this.id = imports.misc.extensionUtils.getCurrentExtension().uuid;
         this.appInfo = Gio.DesktopAppInfo.new(this._settings.get_string('terminal-application'));
+        this.appInfo.get_name = function() { return _('SSH'); };
         this.title = "SSHSearch";
 
         this._hostsSources = [];
@@ -568,6 +572,7 @@ const SshSearchProviderExtension = class SshSearchProviderExtension {
 };
 
 function init() {
+    Convenience.initTranslations();
     return new SshSearchProviderExtension();
 }
 
