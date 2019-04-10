@@ -118,7 +118,10 @@ const ConfigHostsSourceFile = class ConfigHostsSourceFile extends HostsSourceFil
                 // read all hostnames in the host definition line
                 let hostnames = line.slice(HOST_SEARCHSTRING.length).split(' ');
                 for (let j=0; j<hostnames.length; j++) {
-                    hostsDict[hostnames[j]] = 1;
+                    let h = hostnames[j];
+                    if ( h.indexOf('*') == -1 ) {
+                        hostsDict[h] = 1;
+                    }
                 }
             }
         }
