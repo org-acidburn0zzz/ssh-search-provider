@@ -58,71 +58,34 @@ if (ByteArray.toString(ByteArray.fromString('X')) == 'X') {
     }
 }
 
-// The Search provider
-const SshSearchProvider = class SshSearchProvider {
-    constructor(extension) {
-        // Since gnome-shell 3.6 the log output is in ~/.cache/gdm/session.log
-        // Since gnome-shell 3.8 the log output is in /var/log/messages
-        // Since gnome-shell 3.10 you get log output with "journalctl -f"
-        //log('init ssh-search');
-        this.id = imports.misc.extensionUtils.getCurrentExtension().uuid;
-        this._settings = extension._settings;
-        this._logger = extension._logger;
+// A generic file, source of host names
+const HostsSourceFile = class HostsSourceFile {
 
-        this._logger.log_debug('SshSearchProvider.constructor()');
-
-        this.title = "SSHSearch";
-        this._configHosts = [];
-        this._knownHosts = [];
-        this._sshknownHosts1 = [];
-        this._sshknownHosts2 = [];
-        this._terminal_definition = null;
-
-        this.appInfo = Gio.DesktopAppInfo.new(this._settings.get_string('terminal-application'));
-
-        let filename = '';
-
-        // init for ~/.ssh/config
-        filename = GLib.build_filenamev([GLib.get_home_dir(), '/.ssh/', 'config']);
-        let configFile = Gio.file_new_for_path(filename);
-        this._configMonitor = configFile.monitor_file(Gio.FileMonitorFlags.NONE, null);
-        this._configMonitor.connect('changed', this._onConfigChanged.bind(this));
-        this._onConfigChanged(null, configFile, null, Gio.FileMonitorEvent.CREATED);
-
-        // init for ~/.ssh/known_hosts
-        filename = GLib.build_filenamev([GLib.get_home_dir(), '/.ssh/', 'known_hosts']);
-        let knownhostsFile = Gio.file_new_for_path(filename);
-        this._knownhostsMonitor = knownhostsFile.monitor_file(Gio.FileMonitorFlags.NONE, null);
-        this._knownhostsMonitor.connect('changed', this._onKnownhostsChanged.bind(this));
-        this._onKnownhostsChanged(null, knownhostsFile, null, Gio.FileMonitorEvent.CREATED);
-
-        // init for /etc/ssh/ssh_known_hosts
-        let sshknownhostsFile1 = Gio.file_new_for_path('/etc/ssh/ssh_known_hosts');
-        this._sshknownhostsMonitor1 = sshknownhostsFile1.monitor_file(Gio.FileMonitorFlags.NONE, null);
-        this._sshknownhostsMonitor1.connect('changed', this._onSshKnownhosts1Changed.bind(this));
-        this._onSshKnownhosts1Changed(null, sshknownhostsFile1, null, Gio.FileMonitorEvent.CREATED);
-
-        // init for /etc/ssh_known_hosts
-        let sshknownhostsFile2 = Gio.file_new_for_path('/etc/ssh_known_hosts');
-        this._sshknownhostsMonitor2 = sshknownhostsFile2.monitor_file(Gio.FileMonitorFlags.NONE, null);
-        this._sshknownhostsMonitor2.connect('changed', this._onSshKnownhosts2Changed.bind(this));
-        this._onSshKnownhosts2Changed(null, sshknownhostsFile2, null, Gio.FileMonitorEvent.CREATED);
-
+    constructor(logger, path) {
+        this._logger = logger;
+        this._path = path;
+        this._file = Gio.file_new_for_path(this._path);
+        this._monitor = this._file.monitor_file(Gio.FileMonitorFlags.NONE, null);
+        this._changedSignal = this._monitor.connect('changed', this.onFileChange.bind(this));
+        this._hosts = [];
+        this.onFileChange(this._monitor, this._file, null, Gio.FileMonitorEvent.CREATED);
     }
 
-    _cleanup() {
-        this._logger.log_debug('SshSearchProvider._cleanup()');
-
-        this._configMonitor.cancel();
-        this._knownhostsMonitor.cancel();
-        this._sshknownhostsMonitor1.cancel();
-        this._sshknownhostsMonitor2.cancel();
+    cleanup() {
+        this._monitor.disconnect(this._changedSignal);
+        this._changedSignal = null;
+        this._monitor.cancel();
+        this._monitor = null;
     }
 
-    _onConfigChanged(filemonitor, file, other_file, event_type) {
-        this._logger.log_debug('SshSearchProvider._onConfigChanged('+file.get_path()+')');
+    getHosts() {
+        return this._hosts;
+    }
+
+    onFileChange(filemonitor, file, other_file, event_type) {
+        this._logger.log_debug('HostsSourceFile.onFileChange('+file.get_path()+')');
         if (!file.query_exists (null)) {
-            this._configHosts = [];
+            this._hosts = [];
             return;
         }
 
@@ -130,92 +93,95 @@ const SshSearchProvider = class SshSearchProvider {
             event_type == Gio.FileMonitorEvent.CHANGED ||
             event_type == Gio.FileMonitorEvent.CHANGES_DONE_HINT)
         {
-            this._configHosts = [];
+            let contents = file.load_contents(null);
+            let filelines = ByteArray_toString(contents[1]).trim().split('\n');
+            let hosts = [];
+            for (let i in this.parse(filelines)) {
+                hosts.push(i);
+            }
+            this._hosts = hosts;
+            this._logger.log_debug('HostsSourceFile.onFileChange('+file.get_path()+') = '
+                                   + this._hosts.length + '[' + this._hosts + ']');
+        }
+    }
+};
 
-            // read hostnames if ssh-config file is created or changed
-            let content = file.load_contents(null);
-            let filelines = ByteArray_toString(content[1]).trim().split('\n');
+// SSH config file
+const ConfigHostsSourceFile = class ConfigHostsSourceFile extends HostsSourceFile {
+    parse(filelines) {
+        let hostsDict = {};
 
-            // search for all lines which begins with "host"
-            for (var i=0; i<filelines.length; i++) {
-                let line = filelines[i].toString();
-                if (line.toLowerCase().lastIndexOf(HOST_SEARCHSTRING, 0) == 0) {
-                    // read all hostnames in the host definition line
-                    let hostnames = line.slice(HOST_SEARCHSTRING.length).split(' ');
-                    for (var j=0; j<hostnames.length; j++) {
-                        this._configHosts.push(hostnames[j]);
-                    }
+        // search for all lines which begins with "host"
+        for (let i=0; i<filelines.length; i++) {
+            let line = filelines[i].toString();
+            if (line.toLowerCase().lastIndexOf(HOST_SEARCHSTRING, 0) == 0) {
+                // read all hostnames in the host definition line
+                let hostnames = line.slice(HOST_SEARCHSTRING.length).split(' ');
+                for (let j=0; j<hostnames.length; j++) {
+                    hostsDict[hostnames[j]] = 1;
                 }
             }
         }
+
+        return hostsDict;
     }
+};
 
-    _onKnownhostsChanged(filemonitor, file, other_file, event_type) {
-        this._logger.log_debug('SshSearchProvider._onKnownhostsChanged('+file.get_path()+')');
-        if (!file.query_exists (null)) {
-            this._knownHosts = [];
-            return;
-        }
+// SSH Known hosts file
+const SshKnownHostsSourceFile = class SshKnownHostsSourceFile extends HostsSourceFile {
+    parse(filelines) {
+        let hostsDict = {};
 
-        if (event_type == Gio.FileMonitorEvent.CREATED ||
-            event_type == Gio.FileMonitorEvent.CHANGED ||
-            event_type == Gio.FileMonitorEvent.CHANGES_DONE_HINT)
-        {
-            this._knownHosts = this._parseKnownHosts(file);
-        }
-    }
-
-    _onSshKnownhosts1Changed(filemonitor, file, other_file, event_type) {
-        this._logger.log_debug('SshSearchProvider._onKnownhosts1Changed('+file.get_path()+')');
-        if (!file.query_exists (null)) {
-            this._sshknownHosts1 = [];
-            return;
-        }
-
-        if (event_type == Gio.FileMonitorEvent.CREATED ||
-            event_type == Gio.FileMonitorEvent.CHANGED ||
-            event_type == Gio.FileMonitorEvent.CHANGES_DONE_HINT)
-        {
-            this._sshknownHosts1 = this._parseKnownHosts(file);
-        }
-    }
-
-    _onSshKnownhosts2Changed(filemonitor, file, other_file, event_type) {
-        this._logger.log_debug('SshSearchProvider._onKnownhosts2Changed('+file.get_path()+')');
-        if (!file.query_exists (null)) {
-            this._sshknownHosts2 = [];
-            return;
-        }
-
-        if (event_type == Gio.FileMonitorEvent.CREATED ||
-            event_type == Gio.FileMonitorEvent.CHANGED ||
-            event_type == Gio.FileMonitorEvent.CHANGES_DONE_HINT)
-        {
-            this._sshknownHosts2 = this._parseKnownHosts(file);
-        }
-    }
-
-    _parseKnownHosts(file) {
-        this._logger.log_debug('SshSearchProvider._parseKnownHosts('+file.get_path()+')');
-        let knownHosts = [];
-
-        // read hostnames if ssh-known_hosts file is created or changed
-        let content = file.load_contents(null);
-        let filelines = ByteArray_toString(content[1]).trim().split('\n');
-
-        for (var i=0; i<filelines.length; i++) {
+        for (let i=0; i<filelines.length; i++) {
             let hostnames = filelines[i].split(' ')[0];
 
             // if hostname had a 60 char length, it looks like
             // the hostname is hashed and we ignore it here
             if (hostnames[0] != '#' && (hostnames.length != 60 || hostnames.search(',') >= 0)) {
                 hostnames = hostnames.split(',');
-                for (var j=0; j<hostnames.length; j++) {
-                    knownHosts.push(hostnames[j]);
+                for (let j=0; j<hostnames.length; j++) {
+                    hostsDict[hostnames[j]] = 1;
                 }
             }
         }
-        return knownHosts;
+
+        return hostsDict;
+    }
+};
+
+// The Search provider
+const SshSearchProvider = class SshSearchProvider {
+    constructor(extension) {
+        this._settings = extension._settings;
+        this._logger = extension._logger;
+
+        this._logger.log_debug('SshSearchProvider.constructor()');
+
+        this.id = imports.misc.extensionUtils.getCurrentExtension().uuid;
+        this.appInfo = Gio.DesktopAppInfo.new(this._settings.get_string('terminal-application'));
+        this.title = "SSHSearch";
+
+        this._hostsSources = [];
+
+        this._hostsSources.push(new ConfigHostsSourceFile(this._logger,
+                                                          GLib.build_filenamev([GLib.get_home_dir(), '/.ssh/', 'config'])));
+        this._hostsSources.push(new ConfigHostsSourceFile(this._logger, '/etc/ssh_config'));
+        this._hostsSources.push(new ConfigHostsSourceFile(this._logger, '/etc/ssh/ssh_config'));
+
+        this._hostsSources.push(new SshKnownHostsSourceFile(this._logger,
+                                                            GLib.build_filenamev([GLib.get_home_dir(), '/.ssh/', 'known_hosts'])));
+        this._hostsSources.push(new SshKnownHostsSourceFile(this._logger, '/etc/ssh_known_hosts'));
+        this._hostsSources.push(new SshKnownHostsSourceFile(this._logger, '/etc/ssh/ssh_known_hosts'));
+
+        this._terminal_definition = null;
+    }
+
+    _cleanup() {
+        this._logger.log_debug('SshSearchProvider._cleanup()');
+
+        for (let i=0; i < this._hostsSources.length; ++i ) {
+            this._hostsSources[i].cleanup();
+        }
     }
 
     // Search API
@@ -277,65 +243,62 @@ const SshSearchProvider = class SshSearchProvider {
         Util.spawn(cmd);
     }
 
-    _checkHostnames(resultsDict, hostnames, terms) {
-        this._logger.log_debug('SshSearchProvider._checkHostnames()');
-        for (var i=0; i<hostnames.length; i++) {
-            for (var j=0; j<terms.length; j++) {
-                try {
-                    let term_parts = terms[j].split('@');
-                    let host = term_parts[term_parts.length-1];
-                    let user = '';
-                    if (term_parts.length > 1) {
-                        user = term_parts[0];
-                    }
-                    if (hostnames[i].match(host)) {
-                        host = hostnames[i];
-                        let port = 22;
-
-                        // check if hostname is in the format "[ip-address]:port"
-                        if (host[0] == '[') {
-                            let host_port = host.slice(1).split(']:');
-                            host = host_port[0];
-                            port = host_port[1];
-                        }
-
-                        let ssh_name = host;
-                        if (port != 22) {
-                            ssh_name = ssh_name + ':' + port;
-                        }
-                        if (user.length != 0) {
-                            ssh_name = user + '@' + ssh_name;
-                        }
-                        resultsDict[ssh_name] = 1;
-                    }
-                }
-                catch(ex) {
-                    continue;
-                }
-            }
-        }
-    }
-
     filterResults(providerResults, maxResults) {
         this._logger.log_debug('SshSearchProvider.filterResults('+maxResults+')');
         return providerResults;
     }
 
     _getResultSet(sessions, terms) {
-        this._logger.log_debug('SshSearchProvider._getResultSet('+terms+')');
         // check if a found host-name begins like the search-term
         let resultsDict = {};
         let res = terms.map(function (term) { return new RegExp(term, 'i'); });
 
-        this._checkHostnames(resultsDict, this._configHosts, terms);
-        this._checkHostnames(resultsDict, this._knownHosts, terms);
-        this._checkHostnames(resultsDict, this._sshknownHosts1, terms);
-        this._checkHostnames(resultsDict, this._sshknownHosts2, terms);
+        for (let hsi=0; hsi < this._hostsSources.length; ++hsi) {
+            let hostnames = this._hostsSources[hsi].getHosts();
+            for (let i=0; i < hostnames.length; i++) {
+                for (let j=0; j<terms.length; j++) {
+                    try {
+                        let term_parts = terms[j].split('@');
+                        let host = term_parts[term_parts.length-1];
+                        let user = '';
+                        if (term_parts.length > 1) {
+                            user = term_parts[0];
+                        }
+                        if (hostnames[i].match(host)) {
+                            host = hostnames[i];
+                            let port = 22;
+
+                            // check if hostname is in the format "[ip-address]:port"
+                            if (host[0] == '[') {
+                                let host_port = host.slice(1).split(']:');
+                                host = host_port[0];
+                                port = host_port[1];
+                            }
+
+                            let ssh_name = host;
+                            if (port != 22) {
+                                ssh_name = ssh_name + ':' + port;
+                            }
+                            if (user.length != 0) {
+                                ssh_name = user + '@' + ssh_name;
+                            }
+                            resultsDict[ssh_name] = 1;
+                        }
+                    }
+                    catch(ex) {
+                        continue;
+                    }
+                }
+            }
+        }
 
         let results = [];
         for (let i in resultsDict) {
             results.push(i);
         }
+
+        this._logger.log_debug('SshSearchProvider._getResultSet('+terms+') = ' + results.length + '[' + results + ']');
+
         return results;
     }
 
