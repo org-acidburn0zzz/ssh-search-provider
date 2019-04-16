@@ -22,7 +22,37 @@ project which has been unmaintained for a while.
    names (to use this feature you have to set the ssh setting
    "HashKnownHosts" to "no").
 
- * You can prepend a hostname with a username as in `user@host`.
+ * You can prepend a host name with a user name as in `user@host`.
+
+## Configuration
+
+SSH Search Provider Reborn comes with a preference panel which can be
+found from the "Tweaks" application or the [Gnome Shell Extensions
+page](https://extensions.gnome.org/local/).
+
+![SSH Search Provider Reborn preference panel](docs/preferences.png)
+
+The _Arguments_ and _Pass SSH command line as a single argument_
+parameters are automatically filled if the picked _Terminal
+Application_ is one of the following supported applications:
+
+- Gnome Terminal (`org.gnome.Terminal.desktop`, the default)
+
+- Guake (`guake.desktop`)
+
+- RXVT (`rxvt.desktop`)
+
+- Tilix (`com.gexperts.Tilix.desktop`)
+
+- XTerm (`xterm.desktop`)
+
+If the configured _Terminal Application_'s `.desktop` file cannot be
+found, the extension falls back to using the
+`org.gnome.desktop.applications.terminal.exec` and
+`org.gnome.desktop.applications.terminal.exec-args` dconf keys.  You
+can set them up as described in the [documentation for the extension
+version
+3](https://github.com/F-i-f/ssh-search-provider/blob/5a960aff1cc6b3f2ca79d8b7b0fd3bb2ea4e2612/README.md#selecting-your-preferred-terminal-application).
 
 ## Examples
 
@@ -86,44 +116,10 @@ site](https://extensions.gnome.org/extension/1714/ssh-search-provider-reborn/).
 Or download the zip file from the GitHub [releases
 page](https://github.com/F-i-f/ssh-search-provider/releases) and unzip
 [the
-file](https://github.com/F-i-f/ssh-search-provider/releases/download/v3/ssh-search-provider@extensions.gnome-shell.fifi.org.v3.shell-extension.zip)
+file](https://github.com/F-i-f/ssh-search-provider/releases/download/v4/ssh-search-provider@extensions.gnome-shell.fifi.org.v4.shell-extension.zip)
 in the
 `~/.local/share/gnome-shell/extensions/ssh-search-provider@extensions.gnome-shell.fifi.org`
 directory (you may have to create the directory).
-
-## Selecting Your preferred Terminal Application
-
-If you want to replace 'gnome-terminal' with the name of your
-preferred terminal app so you have to set it with either *dconf
-Editor* or with *gsettings*.
-
-### Instructions for *dconf Editor*
-
-Launch *dconf Editor* and navigate to the
-`/org/gnome/desktop/applications/terminal/` key.
-
-![dconf Editor showing the default Terminal settings](docs/dconf-editor-terminal.png)
-
-### Instructions with *gsettings*:
-
-Enter the following command on the terminal:
-
-	gsettings set org.gnome.desktop.applications.terminal exec <new default editor>
-
-For example if you want to change *gnome-terminal* to *terminator* type:
-
-	gsettings set orgf.gnome.desktop.applications.terminal exec terminator
-
-#### Defining arguments for your Terminal Application
-
-If you want to add some arguments to your terminal app command line
-you can set them with:
-
-	gsettings set org.gnome.desktop.applications.terminal exec-arg "<args>"
-
-For example if you want to use *terminator* in border-less mode type:
-
-	gsettings set org.gnome.desktop.applications.terminal exec-arg "--borderless"
 
 ## Building from source
 
@@ -145,6 +141,78 @@ For example if you want to use *terminator* in border-less mode type:
 
 ## Changelog
 
+### Version 4
+#### April 16, 2019.
+
+This is a complete overhaul of the extension.
+
+New features:
+
+- Preference panel for configuring the preferred terminal application.
+
+- Supports literal IPv6 hosts.
+
+- Supports gnome-shell 3.28 (and potentially older versions) (GitHub
+  Issue #3).
+
+- Fully handle terminal emulators other than Gnome Terminal.  Sensible
+  defaults are provided for: Gnome Terminal, Guake, RXVT, Tilix and
+  XTerm, but any other terminal emulator can be used.
+
+- Also parse and monitor `/etc/ssh_config` and `/etc/ssh/ssh_config`,
+  if they exist.
+
+- If the any of the ssh configuration files is a symbolic link, the
+  link target is also monitored for changes.
+
+- Added debug logging (configurable in preferences).
+
+- Faster (sub-)search.
+
+- Internationalized, french translation.
+
+Changes:
+
+- The results now appear under the "SSH" Gnome Shell overview heading
+  (used to be the name of the terminal emulator application).
+
+- `~/.ssh/known_hosts` (and related) entries containing ports (eg.
+  `[localhost]:1234`) are now displayed (and can be searched) by using
+  the bracketed syntax.  This allows for parsing ports in IPv6 literal
+  addresses correctly.
+
+- The Terminal Emulator arguments must be fully specified for Gnome
+  Terminal (the extension used to silently inject the `--command`
+  switch, not anymore).
+
+- Use Subset search when applicable to speed-up searching.
+
+- Almost complete under-the-hood re-implementation.
+
+Bugs fixed:
+
+- No more hidden dependencies on Gnome Terminal (GitHub Issue #2).
+
+- Don't drop/recreate settings and settings signals when the terminal
+  emulator application is changed.
+
+- Ignore wildcards when parsing the `~/.ssh/config` (and related)
+  files.
+
+- Fix terminal emulator command line when launching an host of the
+  form `user@host:port`.
+
+- Don't allow completing `@host` (no user part).
+
+- Don't give completions until at least one letter of the host name is
+  entered (otherwise `user@` would display all possible hosts).
+
+- Icons are now the same in the overview search heading and the
+  individual search results.
+
+- Avoid re-parsing the files needlessly (better filtering of
+  Gio.file.monitor_file() events).
+
 ### Version 3
 #### March 27, 2019.
 
@@ -153,8 +221,11 @@ For example if you want to use *terminator* in border-less mode type:
 ### Version 2
 #### March 26, 2019.
 
-- ES6 / Gnome-Shell 3.32 compatibility (still compatible with 3.30 and lower).
+- ES6 / Gnome-Shell 3.32 compatibility (still compatible with 3.30 and
+  lower).
+
 - Updated meson-gse to latest.
+
 - Minor doc updates.
 
 ### Version 1
@@ -176,7 +247,9 @@ For example if you want to use *terminator* in border-less mode type:
  -->
 <!--  LocalWords:  terminal' gsettings arg args borderless Changelog
  -->
-<!--  LocalWords:  extensions' Bernd Schlapsi Troin Fif dconf
+<!--  LocalWords:  extensions' Bernd Schlapsi Troin Fif dconf prepend
  -->
-<!--  LocalWords:  ES6 gse
+<!--  LocalWords:  ES6 gse Guake RXVT Tilix XTerm 's IPv6 eg
+ -->
+<!--  LocalWords:  wildcards
  -->
