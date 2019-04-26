@@ -108,6 +108,21 @@ Here are some example searches and the search results:
    1. user@desktop
    2. user@desktop1
 
+## License
+
+SSH Search Provider Reborn is free software: you can redistribute it
+and/or modify it under the terms of the GNU General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see [http://www.gnu.org/licenses/].
+
 ## Download / Install
 
 Install directly from the [Gnome Shell Extensions
@@ -251,5 +266,5 @@ Bugs fixed:
  -->
 <!--  LocalWords:  ES6 gse Guake RXVT Tilix XTerm 's IPv6 eg
  -->
-<!--  LocalWords:  wildcards
+<!--  LocalWords:  wildcards merchantability
  -->
