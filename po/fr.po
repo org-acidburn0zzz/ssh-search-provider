@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ssh-search-provider\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-04-10 16:31-0700\n"
-"PO-Revision-Date: 2019-04-10 16:32-0700\n"
+"POT-Creation-Date: 2020-03-11 18:40-0700\n"
+"PO-Revision-Date: 2020-03-11 16:42-0700\n"
 "Last-Translator: Philippe Troin <F-i-f @ github>\n"
 "Language-Team: none\n"
 "Language: fr\n"
@@ -46,10 +46,10 @@ msgstr "Débogage :"
 
 #: src/prefs.js:149
 msgid ""
-"Copyright © 2017-2019 Philippe Troin (<a href=\"https://github.com/F-i-f\">F-"
+"Copyright © 2017-2020 Philippe Troin (<a href=\"https://github.com/F-i-f\">F-"
 "i-f</a> on GitHub)"
 msgstr ""
-"Copyright © 2017-2019 Philippe Troin (<a href=\"https://github.com/F-i-f\">F-"
+"Copyright © 2017-2020 Philippe Troin (<a href=\"https://github.com/F-i-f\">F-"
 "i-f</a> sur GitHub)"
 
 #: src/prefs.js:151
