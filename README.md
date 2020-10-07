@@ -133,7 +133,7 @@ site](https://extensions.gnome.org/extension/1714/ssh-search-provider-reborn/).
 Or download the zip file from the GitHub [releases
 page](https://github.com/F-i-f/ssh-search-provider/releases) and unzip
 [the
-file](https://github.com/F-i-f/ssh-search-provider/releases/download/v6/ssh-search-provider@extensions.gnome-shell.fifi.org.v6.shell-extension.zip)
+file](https://github.com/F-i-f/ssh-search-provider/releases/download/v7/ssh-search-provider@extensions.gnome-shell.fifi.org.v7.shell-extension.zip)
 in the
 `~/.local/share/gnome-shell/extensions/ssh-search-provider@extensions.gnome-shell.fifi.org`
 directory (you may have to create the directory).
@@ -157,6 +157,11 @@ directory (you may have to create the directory).
 - To build the extension zip files, run: `ninja -C build extension.zip`, the extension will be found under `build/extension.zip`.
 
 ## Changelog
+
+### Version 7
+#### October 6, 2020
+
+- Declare gnome-shell 3.38 compatibility (no code changes required).
 
 ### Version 6
 #### March 11, 2020
